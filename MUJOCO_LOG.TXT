@@ -1,0 +1,9 @@
+Wed Apr 16 09:49:30 2025
+WARNING: Nan, Inf or huge value in QACC at DOF 1. The simulation is unstable. Time = 24.7440.
+
+Tue Apr 22 10:44:12 2025
+ERROR: an OpenGL platform library has not been loaded into this process, this most likely means that a valid OpenGL context has not been created before mjr_makeContext was called
+
+Tue Apr 22 11:00:29 2025
+ERROR: an OpenGL platform library has not been loaded into this process, this most likely means that a valid OpenGL context has not been created before mjr_makeContext was called
+

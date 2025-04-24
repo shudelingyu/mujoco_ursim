@@ -1,0 +1,24 @@
+{
+  "folders": [
+    {
+      "path": "."
+    },
+    {
+      "path": "${workspaceFolder}/test1"
+    },
+    {
+      "path": "${workspaceFolder}/test_ik"
+    }
+    // {
+    //   "path": "project3"
+    // }
+  ],
+  "settings": {
+    "cmake.buildDirectory": "${workspaceFolder}/build",
+    "cmake.sourceDirectory": "${workspaceFolder}",
+    "cmake.configureArgs": [
+      "-DCMAKE_EXPORT_COMPILE_COMMANDS=YES"
+    ]
+  }
+}
+

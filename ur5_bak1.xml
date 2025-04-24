@@ -1,0 +1,120 @@
+<mujoco model="ur5">
+    <compiler angle="radian" />
+    <size njmax="500" nconmax="100" />
+    <option timestep="0.002" gravity ="0 0 -9.81" />
+    <asset>
+        <material name="green" rgba="0 0.9 0 1" />
+        <material name="blue" rgba="0 0 0.9 1" />
+        <texture type="skybox" builtin="gradient" rgb1="1 1 1" rgb2=".6 .8 1" width="10" height="10"/>
+<!--        <material name="grid" texture="grid" texrepeat="1 1 1" texuniform="true" reflectance=".2" />-->
+        <mesh name="base" file="base.stl" />
+        <mesh name="shoulder" file="shoulder.stl" />
+        <mesh name="upperarm" file="upperarm.stl" />
+        <mesh name="forearm" file="forearm.stl" />
+        <mesh name="wrist1" file="wrist1.stl" />
+        <mesh name="wrist2" file="wrist2.stl" />
+        <mesh name="wrist3" file="wrist3.stl" />
+    </asset>
+    <worldbody>
+        <geom type="mesh" rgba="0.7 0.7 0.7 1" mesh="base" />
+        <body name="shoulder_link" pos="0 0 0.089159">
+            <inertial pos="0 0 0" mass="3.7" diaginertia="0.0102675 0.0102675 0.00666" />
+            <joint name="shoulder_pan_joint" pos="0 0 0" axis="0 0 1" limited="true" range="-6.28319 6.28319" />
+            <geom type="mesh" rgba="0.7 0.7 0.7 1" mesh="shoulder" />
+            <body name="upper_arm_link" pos="0 0.13585 0" quat="0.707107 0 0.707107 0">
+                <inertial pos="0 0 0.28" mass="8.393" diaginertia="0.226891 0.226891 0.0151074" />
+                <joint name="shoulder_lift_joint" pos="0 0 0" axis="0 1 0" limited="true" range="-6.28319 6.28319" />
+                <geom type="mesh" rgba="0.7 0.7 0.7 1" mesh="upperarm" />
+                <body name="forearm_link" pos="0 -0.1197 0.425">
+                    <inertial pos="0 0 0.196125" mass="2.275" diaginertia="0.0312168 0.0312168 0.004095" />
+                    <joint name="elbow_joint" pos="0 0 0" axis="0 1 0" limited="true" range="-3.14159 3.14159" />
+                    <geom type="mesh" rgba="0.7 0.7 0.7 1" mesh="forearm" />
+                    <body name="wrist_1_link" pos="0 0 0.39225" quat="0.707107 0 0.707107 0">
+                        <inertial pos="0 0.093 0" mass="1.219" diaginertia="0.0025599 0.0025599 0.0021942" />
+                        <joint name="wrist_1_joint" pos="0 0 0" axis="0 1 0" limited="true" range="-6.28319 6.28319" />
+                        <geom type="mesh" rgba="0.7 0.7 0.7 1" mesh="wrist1" />
+                        <body name="wrist_2_link" pos="0 0.093 0">
+                            <inertial pos="0 0 0.09465" mass="1.219" diaginertia="0.0025599 0.0025599 0.0021942" />
+                            <joint name="wrist_2_joint" pos="0 0 0" axis="0 0 1" limited="true" range="-6.28319 6.28319" />
+                            <geom type="mesh" rgba="0.7 0.7 0.7 1" mesh="wrist2" />
+                            <body name="wrist_3_link" pos="0 0 0.09465">
+                                <inertial pos="0 0.0650884 0" quat="0.707107 0 0 0.707107" mass="0.1889" diaginertia="0.000132134 8.47648e-05 8.47648e-05" />
+                                <joint name="wrist_3_joint" pos="0 0 0" axis="0 1 0" limited="true" range="-6.28319 6.28319" />
+                                <geom type="mesh" rgba="0.7 0.7 0.7 1" mesh="wrist3" />
+                                <geom size="0.005 0.005 0.005" pos="0 0.0723 0" quat="0.707107 0 0 0.707107" type="box" />
+                            </body>
+                        </body>
+                    </body>
+                </body>
+            </body>
+        </body>
+    </worldbody>
+    <actuator>
+        <!-- 每个关节配置三种执行器模式 -->
+        <motor name="trq_ctrl1" joint="shoulder_pan_joint" ctrllimited="true" ctrlrange="-100 100" />
+        <motor name="trq_ctrl2" joint="shoulder_lift_joint" ctrllimited="true" ctrlrange="-200 200" />
+        <motor name="trq_ctrl3" joint="elbow_joint" ctrllimited="true" ctrlrange="-200 200" />
+        <motor name="trq_ctrl4" joint="wrist_1_joint" ctrllimited="true" ctrlrange="-100 100" />
+        <motor name="trq_ctrl5" joint="wrist_2_joint" ctrllimited="true" ctrlrange="-100 100" />
+        <motor name="trq_ctrl6" joint="wrist_3_joint" ctrllimited="true" ctrlrange="-100 100" />
+    </actuator>
+    <!-- <actuator>
+	    <position name="pos_ctrl1" joint="shoulder_pan_joint" kp="10" />
+        <position name="pos_ctrl2" joint="shoulder_lift_joint" kp="10" />
+        <position name="pos_ctrl3" joint="elbow_joint" kp="10" />
+        <position name="pos_ctrl4" joint="wrist_1_joint" kp="10" />
+        <position name="pos_ctrl5" joint="wrist_2_joint" kp="10" />
+        <position name="pos_ctrl6" joint="wrist_3_joint" kp="10" />
+        <motor name="trq_ctrl1" joint="shoulder_pan_joint" ctrllimited="true" ctrlrange="-100 100" />
+        <motor name="trq_ctrl2" joint="shoulder_lift_joint" ctrllimited="true" ctrlrange="-200 200" />
+        <motor name="trq_ctrl3" joint="elbow_joint" ctrllimited="true" ctrlrange="-200 200" />
+        <motor name="trq_ctrl4" joint="wrist_1_joint" ctrllimited="true" ctrlrange="-100 100" />
+        <motor name="trq_ctrl5" joint="wrist_2_joint" ctrllimited="true" ctrlrange="-100 100" />
+        <motor name="trq_ctrl6" joint="wrist_3_joint" ctrllimited="true" ctrlrange="-100 100" />
+	</actuator> -->
+    <!-- <actuator>
+	    <motor name="trq_ctrl1" joint="shoulder_pan_joint" ctrllimited="true" ctrlrange="-100 100" />
+        <motor name="trq_ctrl2" joint="shoulder_lift_joint" ctrllimited="true" ctrlrange="-200 200" />
+        <motor name="trq_ctrl3" joint="elbow_joint" ctrllimited="true" ctrlrange="-200 200" />
+        <motor name="trq_ctrl4" joint="wrist_1_joint" ctrllimited="true" ctrlrange="-100 100" />
+        <motor name="trq_ctrl5" joint="wrist_2_joint" ctrllimited="true" ctrlrange="-100 100" />
+        <motor name="trq_ctrl6" joint="wrist_3_joint" ctrllimited="true" ctrlrange="-100 100" />
+	</actuator> -->
+    <!-- <actuator>
+	    <position name="pos_ctrl1" joint="shoulder_pan_joint" kp="10" />
+	    <velocity name="vel_ctrl1" joint="shoulder_pan_joint" kv="1" />
+	    <motor name="trq_ctrl1" joint="shoulder_pan_joint" ctrllimited="true" ctrlrange="-100 100" />
+        <position name="pos_ctrl2" joint="shoulder_lift_joint" kp="10" />
+	    <velocity name="vel_ctrl2" joint="shoulder_lift_joint" kv="1" />
+	    <motor name="trq_ctrl2" joint="shoulder_lift_joint" ctrllimited="true" ctrlrange="-200 200" />
+        <position name="pos_ctrl3" joint="elbow_joint" kp="10" />
+	    <velocity name="vel_ctrl3" joint="elbow_joint" kv="1" />
+	    <motor name="trq_ctrl3" joint="elbow_joint" ctrllimited="true" ctrlrange="-200 200" />
+        <position name="pos_ctrl4" joint="wrist_1_joint" kp="10" />
+	    <velocity name="vel_ctrl4" joint="wrist_1_joint" kv="1" />
+	    <motor name="trq_ctrl4" joint="wrist_1_joint" ctrllimited="true" ctrlrange="-100 100" />
+        <position name="pos_ctrl5" joint="wrist_2_joint" kp="10" />
+	    <velocity name="vel_ctrl5" joint="wrist_2_joint" kv="1" />
+	    <motor name="trq_ctrl5" joint="wrist_2_joint" ctrllimited="true" ctrlrange="-100 100" />
+        <position name="pos_ctrl6" joint="wrist_3_joint" kp="10" />
+	    <velocity name="vel_ctrl6" joint="wrist_3_joint" kv="1" />
+	    <motor name="trq_ctrl6" joint="wrist_3_joint" ctrllimited="true" ctrlrange="-100 100" />
+	</actuator> -->
+    <sensor>
+        <!-- 关节位置传感器 -->
+        <jointpos name="joint1_pos" joint="shoulder_pan_joint"/>
+        <jointpos name="joint2_pos" joint="shoulder_lift_joint"/>
+        <jointpos name="joint3_pos" joint="elbow_joint"/>
+        <jointpos name="joint4_pos" joint="wrist_1_joint"/>
+        <jointpos name="joint5_pos" joint="wrist_2_joint"/>
+        <jointpos name="joint6_pos" joint="wrist_3_joint"/>
+        
+        <!-- 关节速度传感器 -->
+        <jointvel name="joint1_vel" joint="shoulder_pan_joint"/>
+        <jointvel name="joint2_vel" joint="shoulder_lift_joint"/>
+        <jointvel name="joint3_vel" joint="elbow_joint"/>
+        <jointvel name="joint4_vel" joint="wrist_1_joint"/>
+        <jointvel name="joint5_vel" joint="wrist_2_joint"/>
+        <jointvel name="joint6_vel" joint="wrist_3_joint"/>
+    </sensor>
+</mujoco>
