@@ -57,11 +57,21 @@ public:
         cam_.lookat[1] = arr_view[4];
         cam_.lookat[2] = arr_view[5];
 
+        // 备份初始状态
+        initial_state_ = mj_makeData(model_);
+        mj_copyData(initial_state_, model_, data_);
+
+        // 存储初始相机参数
+        // double arr_view[] = {1, 1, 2, 0.0, 0.0, 0.0};
+        std::copy(arr_view, arr_view+6, initial_cam_);
         // 方法1：禁用所有接触约束,使得constraint为0
         model_->opt.disableflags |= mjDSBL_CONSTRAINT;
     }
 
     ~MuJoCoViewer() {
+        if (initial_state_) {
+            mj_deleteData(initial_state_);
+        }
         mjv_freeScene(&scene_);
         mjr_freeContext(&context_);
         glfwDestroyWindow(window_);
@@ -72,12 +82,18 @@ public:
     {
         while (!glfwWindowShouldClose(window_))
         {
-            mjtNum simstart = data_->time;
-            while (data_->time - simstart < 1.0 / 60.0)
-            {
-                mj_step(model_, data_);
-                // mj_forward(m,d);
+            if (!is_paused_) {  // 只在非暂停状态下更新物理
+                mjtNum simstart = data_->time;
+                while (data_->time - simstart < 1.0 / 60.0) {
+                    mj_step(model_, data_);
+                }
             }
+            // mjtNum simstart = data_->time;
+            // while (data_->time - simstart < 1.0 / 60.0)
+            // {
+            //     mj_step(model_, data_);
+            //     // mj_forward(m,d);
+            // }
             if (endtime<50){
                 if (data_->time >= endtime)
                 {
@@ -113,6 +129,10 @@ private:
     mjrContext context_;
     GLFWwindow* window_;
 
+    bool is_paused_ = false;      // 暂停状态
+    double initial_cam_[6];       // 初始相机参数存储
+    mjData* initial_state_ = nullptr; // 初始状态备份
+
     // 鼠标状态
     bool button_left_ = false;
     bool button_middle_ = false;
@@ -123,9 +143,23 @@ private:
     // 静态回调函数
     static void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
         auto* viewer = static_cast<MuJoCoViewer*>(glfwGetWindowUserPointer(window));
-        if (action == GLFW_PRESS && key == GLFW_KEY_BACKSPACE) {
-            mj_resetData(viewer->model_, viewer->data_);
+        if (key == GLFW_KEY_R && action == GLFW_PRESS) {
+            // 完全重置到初始状态
+            mj_copyData(viewer->data_, viewer->model_, viewer->initial_state_);
             mj_forward(viewer->model_, viewer->data_);
+            
+            // 恢复相机参数
+            viewer->cam_.azimuth = viewer->initial_cam_[0];
+            viewer->cam_.elevation = viewer->initial_cam_[1];
+            viewer->cam_.distance = viewer->initial_cam_[2];
+            viewer->cam_.lookat[0] = viewer->initial_cam_[3];
+            viewer->cam_.lookat[1] = viewer->initial_cam_[4];
+            viewer->cam_.lookat[2] = viewer->initial_cam_[5];
+        }
+        
+        // 添加空格键暂停控制
+        if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
+            viewer->is_paused_ = !viewer->is_paused_;
         }
     }
 

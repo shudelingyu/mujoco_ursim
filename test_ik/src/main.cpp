@@ -19,8 +19,8 @@ MjWrapper _mujoco;
 //Change the xml file
  //double qinit[6] ={0, -2.55, -0.785, 0, 0, 0};
 //double qinit[6] = {0,-1,0,1,0,0};
-// const double qinit[6] = {0,0,0,0,0,0};
-double qinit[6] ={-0.785, -2.55, -0.785, -4.71, -1.57, 0};
+const double qinit[6] = {0,0,0,0,0,0};
+// double qinit[6] ={-0.785, -2.55, -0.785, -4.71, -1.57, 0};
 
 // double qinit[6] = {M_PI*0.5,M_PI*0.5,M_PI*0.5,M_PI*0.5,M_PI*0.5,0};
 //double qinit[6] = {-M_PI*0.5,-M_PI*0.5,0,-M_PI*0.5,0,0};
@@ -34,6 +34,7 @@ double qinit[6] ={-0.785, -2.55, -0.785, -4.71, -1.57, 0};
 // 控制器回调
 void controller(const mjModel* m, mjData* d) {
     double time = d->time;
+    double dt = 0.002;
     ur_frame *ur_kin = ur_frame::instance();
     //正动力学计算
     //mj_forward(m,d);
@@ -66,6 +67,8 @@ void controller(const mjModel* m, mjData* d) {
         auto& ctrl = m_controller.get_ctrl()->joints[i];
 
         ctrl.target_pos= plan.CubicSpline_at(param.time_whole.size(), param.time_whole.data(), param.pos[i].data(), param.vel[i].data(), param.pos_p1[i].data(), param.pos_p2[i].data(), param.pos_p3[i].data(), time);
+        ctrl.pid.target = ctrl.target_pos;
+        ctrl.pid.current = d->qpos[i];
         switch (ctrl.mode) {
             case TORQUE_CONTROL:
                 d->ctrl[i] = ctrl.target_torque;
@@ -88,15 +91,17 @@ void controller(const mjModel* m, mjData* d) {
                 double vel_error = ctrl.target_vel - d->qvel[i];
                 double vel_control=ctrl.pid.Kpd* vel_error;
                 //pd控制
-                d->qpos[i] = qinit[i];
+                // d->qpos[i] = qinit[i];
                 // d->ctrl[i] = pos_control + vel_control+d->qfrc_bias[i];
-                
+                // ctrl.pid.target = m_controller.PIcontroller(ctrl,dt);
+                // ctrl.pid.current = d->qvel[i];
                 //pd控制+Feedforward
                 //vel_control=std::clamp(vel_control,m->actuator_ctrlrange[2 * i],m->actuator_ctrlrange[2 * i + 1]);
                 // target_pos[i]=ctrl.target_pos;
                 // target_vel[i]=0;
                 // target_acc[i]=0;
-                // d->ctrl[i] = pos_control + vel_control;
+                d->ctrl[i]=m_controller.PDcontroller(ctrl,dt)+d->qfrc_bias[i];
+                // d->ctrl[i] = pos_control + vel_control+d->qfrc_bias[i];
 
                 //PD + Feedback Linearization
                 // std::vector<double> u(m->nv);model-
@@ -136,15 +141,15 @@ void controller(const mjModel* m, mjData* d) {
     // mju_copy(d->qvel, target_vel, m->nv);
     // mju_copy(d->qacc, target_acc, m->nv);
 
-    // // 逆动力学控制，计算关节力矩
-    // mj_inverse(m,d);
-    // for (size_t i = 0; i < 6; i++)
-    // {
-    //     //d->ctrl[i] = d->ctrl[i]+d->qfrc_inverse[i];
-    //     d->ctrl[i] = d->ctrl[i]+d->qfrc_bias[i];
-    //     //d->ctrl[i] = d->ctrl[i];
-    //     //d->ctrl[i] = d->qfrc_bias[i];
-    // }
+    // 逆动力学控制，计算关节力矩
+    mj_inverse(m,d);
+    for (size_t i = 0; i < 6; i++)
+    {
+        //d->ctrl[i] = d->ctrl[i]+d->qfrc_inverse[i];
+        // d->ctrl[i] = d->ctrl[i]+d->qfrc_bias[i];
+        //d->ctrl[i] = d->ctrl[i];
+        //d->ctrl[i] = d->qfrc_bias[i];
+    }
 }
 
 void init_controller(const mjModel* m, mjData* d)
@@ -159,10 +164,12 @@ void init_controller(const mjModel* m, mjData* d)
   ur_dh.H2 = 0.09465;
   ur_frame::init(ur_dh); 
   m_controller.configure_actuators_mode(m, ControlMode::POSITION_CONTROL);
-  double joint_Kpp[]={100,100,100,100,100,100};
-  double joint_Kpd[]={30,30,30,30,10,10};
+  double joint_Kpp[]={200,200,200,200,200,200};
+  double joint_Kpd[]={100,100,100,100,100,100};
+  double joint_Kpi[]={10,10,10,10,10,10};
 
-  double joint_Kvp[]={100,100,100,200,200,20};
+
+  double joint_Kvp[]={200,200,200,200,200,20};
   double joint_Kvd[]={10,10,10,10,10,10};
   double joint_vellimit[]={120,120,120,120,120,120};
 
@@ -258,7 +265,7 @@ void init_controller(const mjModel* m, mjData* d)
 
     for (int i = 0; i < m->nu; i++)
     {
-        m_controller.configure_actuators_pid(m,i,joint_Kpp[i],joint_Kpd[i],joint_Kvp[i],joint_Kvd[i]);
+        m_controller.configure_actuators_pid(m,i,joint_Kpp[i],joint_Kpd[i],joint_Kpi[i],joint_Kvp[i],joint_Kvd[i]);
         m_controller.configure_actuators_vel_limit(m,"degree",i,joint_vellimit[i]);
     }
 

@@ -1,8 +1,15 @@
 #include "controller.hpp"
+#include "ur_kinematics.hpp"
 
 Controller::Controller()
 {
     m_ctrl.joints.resize(6);
+    prev_ddxe.resize(6);
+    prev_ddxe.reserve(0);
+    prev_dxe.resize(6);
+    prev_dxe.reserve(0);
+    prev_xe.resize(6);
+    prev_xe.reserve(0);
 }
 
 Controller::~Controller()
@@ -36,7 +43,7 @@ void Controller::load_xml(const initmujoco &init,MjWrapper &mjWrapper,int argc, 
 }
 
 // 配置制定关节pd参数
-void Controller::configure_actuators_pid(const mjModel *m, int selected_joint, double Kpp, double Kpd, double Kvp, double Kvd)
+void Controller::configure_actuators_pid(const mjModel *m, int selected_joint, double Kpp, double Kpd,double Kpi, double Kvp, double Kvd)
 {
     auto &ctrl = m_ctrl.joints[selected_joint];
     switch (ctrl.mode)
@@ -54,6 +61,8 @@ void Controller::configure_actuators_pid(const mjModel *m, int selected_joint, d
     {
         ctrl.pid.Kpp = Kpp;
         ctrl.pid.Kpd = Kpd;
+        ctrl.pid.Kpi = Kpi;
+
         break;
     }
     }
@@ -98,7 +107,7 @@ void Controller::configure_actuators_vel_limit(const mjModel *m, const std::stri
 
 double Controller::PDcontroller(JointController &ctrl, const double &dt)
 {
-    double pos_error = ctrl.target_pos - ctrl.current_pos;
+    double pos_error = ctrl.pid.target - ctrl.pid.current;
     double derivative = (pos_error - ctrl.pid.prev_error) / dt;
     ctrl.pid.prev_error = pos_error;
     return ctrl.pid.Kpp * pos_error + ctrl.pid.Kpd * derivative;
@@ -106,10 +115,37 @@ double Controller::PDcontroller(JointController &ctrl, const double &dt)
 
 double Controller::PIcontroller(JointController &ctrl, const double &dt)
 {
-    double vel_error = ctrl.target_vel - ctrl.current_vel;
+    double vel_error = ctrl.pid.target - ctrl.pid.current;
     ctrl.pid.integral += vel_error * dt;
     ctrl.pid.integral = std::clamp(ctrl.pid.integral, -ctrl.pid.max_integral, ctrl.pid.max_integral);
     double output = ctrl.pid.Kpp * vel_error + ctrl.pid.Kpi * ctrl.pid.integral;
     // 输出限幅
     return std::clamp(output, -ctrl.pid.max_output, ctrl.pid.max_output);
+}
+
+void Controller::AdmittanceController(const mjModel* m,mjData* d,const double& dt,AdmittanceParam& param,std::vector<double> &target_q){
+    // ddxe(i+1)=[Fxe(i+1)-B*dxe(i)-K*xe(i)]/M;
+    // dxe(i+1)=dt*[ddxe(i+1)+ddxe(i)]/2+dxe(i) ;              %v1=dt*(a0+a1)/2+v0  加速度一次积分得速度
+    // xe(i+1)=dt*[dxe(i+1)+dxe(i)]/2+xe(i)  ;
+
+    for(int i = 0 ;i<6;i++){
+        prev_ddxe[i] = param.ddxe[i];
+        prev_dxe[i] = param.dxe[i];
+        prev_xe[i] = param.xe[i];
+        param.ddxe[i] = (param.Fe[i]-param.B[i]*param.dxe[i]-param.K[i]*param.xe[i])/param.M[i];
+        // if(i<3){
+        //     param.dxe[i] = 
+        // }
+        param.dxe[i] = dt*(param.ddxe[i]+prev_ddxe[i])/2 + prev_dxe[i];
+        param.xe[i] = dt*(param.dxe[i]+prev_dxe[i])/2+prev_xe[i];
+    }
+
+    Eigen::MatrixXd J = ur_frame::instance()->jacobian_space(m,d);
+    vec_t qv = pinv(J)*stdvec2vecxd(param.xe);
+    // theta_offset=theta_offset+qv*dt;
+    vec_t target(6);
+    for(int i=0;i<6;i++){
+        target[i] = d->qpos[i] + qv[i]*dt;
+    }
+    target_q = vecxd2stdvec(target);
 }

@@ -1,0 +1,456 @@
+
+#ifndef QPCONTROLLER_HPP
+#define QPCONTROLLER_HPP
+
+/**
+ * @file QPController.hpp
+ */
+
+#include <cmath>
+#include <functional>
+#include "math_util.hpp"
+// #include "Mtm/mtmmath.hpp"
+// #include "Common/xfunc.hpp"
+
+namespace codeit::model
+{
+    struct JointConstraint
+    {
+        double *qmin, *qmax, *vmin, *vmax, *amin, *amax;
+    };
+
+    /** @addtogroup algorithms */
+    /* @{*/
+
+    /**
+     * The QPController provides an visual servoing control scheme, which is based on
+     * quadratic optimization. The method computes the \f$\mathbf{\dot{q}}\f$ minimizing
+     * \f$\|\mathbf{J}\mathbf{\dot{q}}-\mathbf{\dot{x}}\|^2\f$, subject to the joint position,
+     * velocity and acceleration limits.
+     *
+     * See the paper: L.-P. Ellekilde, P. Favrhold, M. Paulin and H.G. Petersen, "Robust
+     * Control for High-Speed Visual Servoing Applications", To appear in International
+     * Journal for Advanced Robotic Systems, vol. 4, no. 3, 2007.
+     */
+    template <size_t N>
+    class QPController
+    {
+    public:
+        /**
+         * @brief Construct QPController object
+         * @param h [in] step-size to use
+         * @param state [in] state of the workcell
+         * @param device [in] device to control
+         */
+        QPController(const double &h, const JointConstraint &jc, const double *cw = nullptr, const double *jw = nullptr);
+        explicit QPController(const double &h) : _h(h) {}
+
+        /**
+         * @brief destructor
+         */
+        virtual ~QPController() {}
+
+        void setCartesianConstraint(const double *pos, const double *ori);
+        void setJointConstraint(const JointConstraint &jc);
+        void setCartesianWeight(const double *cw);
+        void setJointWeight(const double *jw);
+
+        /**
+         * @brief Computes joint velocities for a tool velocity
+         *
+         * The method provides the, in a least square sense, optimal joint
+         * velocity for the specified tool velocity screw. That is the
+         * \f$\mathbf{\dot{q}}\f$ minimizing
+         * \f$\|\mathbf{J}\mathbf{\dot{q}}-\mathbf{\dot{x}}\|^2\f$, subject to the joint position,
+         * velocity and acceleration limits.
+         *
+         * @param q [in] current device joint configuration
+         * @param dq [in] current device joint velocity
+         * @param tcpscrew [in] desired velocity screw of tcp
+         *
+         * @return the optimal joint velocity
+         */
+        double solve(const double *q, const double *dq, const double *J, const double *tcp_vel, double *res);
+
+        double getDT() const {return _h;}
+        void getLimitType(char *lowwer, char *upper);
+
+
+    private:
+        double inequalitySolve(const double *G, const double *g0, const double *lower, const double *upper,
+                               const double *J, const double *tcp_vel, double *res);
+
+        void calculateVelocityLimits(const double *q, const double *dq, double *lower, double *upper);
+
+        double _h;
+
+        double _qmin[N] = {};
+        double _qmax[N] = {};
+
+        double _vmin[N] = {};
+        double _vmax[N] = {};
+
+        double _amin[N] = {};
+        double _amax[N] = {};
+
+        double _pos_error[3] = {};
+        double _ori_error[3] = {};
+        bool _pos_error_flag = false;
+        bool _ori_error_flag = false;
+
+        // Stuff for stats
+        char _lowerLimitType[N];
+        char _upperLimitType[N];
+
+        double _cartesian_weight[6] = {1, 1, 1, 1, 1, 1};
+        double _joint_weight[N] = {};
+    };
+
+    /**@}*/
+
+    template <size_t N>
+    QPController<N>::QPController(const double &h, const JointConstraint &jc, const double *cw, const double *jw)
+        : _h(h)
+    {
+        setJointConstraint(jc);
+        if(cw)
+        {
+            setCartesianWeight(cw);
+        }
+        if(jw)
+        {
+            setJointWeight(jw);
+        }
+    }
+
+    template <size_t N>
+    void QPController<N>::setJointConstraint(const JointConstraint &jc)
+    {
+        if(jc.qmin && jc.qmax && jc.vmin && jc.vmax && jc.amin && jc.amax)
+        {
+            for(size_t i = 0; i < N; ++i)
+            {
+                _qmin[i] = jc.qmin[i];
+                _qmax[i] = jc.qmax[i];
+
+                _vmin[i] = jc.vmin[i];
+                _vmax[i] = jc.vmax[i];
+
+                _amin[i] = jc.amin[i];
+                _amax[i] = jc.amax[i];
+            }
+        }
+    }
+
+    template <size_t N>
+    void QPController<N>::setCartesianConstraint(const double *pos, const double *ori)
+    {
+        if(pos)
+        {
+            s_vc(3, pos, _pos_error);
+            _pos_error_flag = true;
+        }
+        else
+        {
+            _pos_error_flag = false;
+        }
+
+        if(ori)
+        {
+            s_vc(3, ori, _ori_error);
+            _ori_error_flag = true;
+        }
+        else
+        {
+            _ori_error_flag = false;
+        }
+    }
+
+    template <size_t N>
+    void QPController<N>::setCartesianWeight(const double *cw)
+    {
+        if(cw)
+        {
+            s_vc(6, cw, _cartesian_weight);
+        }
+    }
+
+    template <size_t N>
+    void QPController<N>::setJointWeight(const double *jw)
+    {
+        if(jw)
+        {
+            s_vc(N, jw, _joint_weight);
+        }
+    }
+
+    template <size_t N>
+    double QPController<N>::solve(const double *q, const double *dq, const double *J, const double *tcp_vel, double *res)
+    {
+        double lower[N]{};
+        double upper[N]{};
+        calculateVelocityLimits(q, dq, lower, upper);
+
+        // func.mout() << "lower: ";
+        // for(size_t i = 0; i < N; i++)
+        // {
+        //     func.mout() << lower[i] << _lowerLimitType[i] << " ";
+        // }
+        // func.mout() << endl;
+
+        // func.mout() << "upper: ";
+        // for(size_t i = 0; i < N; i++)
+        // {
+        //     func.mout() << upper[i] << _upperLimitType[i] << " ";
+        // }
+        // func.mout() << endl;
+
+        double W[36]{};
+        for(size_t i = 0; i < 6; ++i)
+        {
+            W[i*6 + i] = _cartesian_weight[i];
+        }
+
+        double JT[N*6]{};
+        transpose(6, N, J, JT);
+
+        double temp[N*6]{};
+        s_mm(N, 6, 6, JT, W, temp);
+
+        double G[N*N]{};
+        s_mm(N, N, 6, temp, J, G);
+
+        // add lambda and joint weight
+        double lambda = 1e-8;
+        for(size_t i = 0; i < N; i++)
+        {
+            G[i*N + i] += lambda + _joint_weight[i];
+        }
+
+        double g0[N]{};
+        s_mm(N, 1, 6, temp, tcp_vel, g0);
+        s_iv(N, g0);
+
+        double value = inequalitySolve(G, g0, lower, upper, J, tcp_vel, res);
+
+        if(value < 1e200)
+        {
+            value *= 2;
+            for(size_t i = 0; i < 6; ++i)
+            {
+                value += _cartesian_weight[i] * tcp_vel[i] * tcp_vel[i];
+            }
+            for(size_t i = 0; i < N; i++)
+            {
+                value -= _joint_weight[i] * res[i] * res[i];
+            }
+        }
+        else
+        {
+            for(size_t i = 0; i < N; i++)
+            {
+                if(dq[i] > 0 && dq[i] + _amin[i]*_h > 0)
+                {
+                    res[i] = dq[i] + _amin[i]*_h;
+                }
+                else if(dq[i] < 0 && dq[i] + _amax[i]*_h < 0)
+                {
+                    res[i] = dq[i] + _amax[i]*_h;
+                }
+                else
+                {
+                    res[i] = 0;
+                }
+            }
+        }
+
+        return value;
+    }
+
+    template <size_t N>
+    void QPController<N>::calculateVelocityLimits(const double *q, const double *dq, double *lower, double *upper)
+    {
+        double accmin, accmax, velmin, velmax, posmin, posmax;
+        double x;
+        for(size_t i = 0; i < N; i++)
+        {
+            // For the acceleration
+            accmin = _h * _amin[i] + dq[i];
+            accmax = _h * _amax[i] + dq[i];
+            // For the velocity
+            velmin = _vmin[i];
+            velmax = _vmax[i];
+            // For the position
+            // If v_current<=v_max(X)
+            x = _qmax[i] - q[i];
+            if (x <= 0) {
+                posmax = 0;
+                //  std::cout<<"Warning: Set upper pos limit to 0"<<x<<"<=0"<<std::endl;
+            }
+            else {
+                // For qmax
+                double j_x     = round(sqrt(1 - 8 * x / (_h * _h * _amin[i])) / 2 - 1);
+                double q_end_x = (x + _h * _h * _amin[i] * (j_x * (j_x + 1)) / 2) / (_h * (j_x + 1));
+                double q_max_x = q_end_x - j_x * _amin[i] * _h;
+                double X       = x - _h * q_max_x;
+                if (X <= 0) {
+                    posmax = 0;
+                    //          std::cout<<"Warning: Set upper pos limit to 0"<<x<<"<=0"<<std::endl;
+                }
+                else {
+                    double j_X = round(sqrt(1 - 8 * X / (_h * _h * _amin[i])) / 2 - 1);
+                    double q_end_X = (X + _h * _h * _amin[i] * (j_X * (j_X + 1)) / 2) / (_h * (j_X + 1));
+                    posmax = q_end_X - j_X * _amin[i] * _h;
+                }
+            }
+            x = q[i] - _qmin[i];
+            if (x <= 0) {
+                //  std::cout<<"Warning: Set lower pos limit to 0 because"<<x<<"<=0"<<std::endl;
+                posmin = 0;
+            }
+            else {    // For qmin
+                double j_x     = round(sqrt(1 + 8 * x / (_h * _h * _amax[i])) / 2 - 1);
+                double q_end_x = (-x + _h * _h * _amax[i] * (j_x * (j_x + 1)) / 2) / (_h * (j_x + 1));
+                double q_min_x = q_end_x - j_x * _amax[i] * _h;
+                double X       = x + _h * q_min_x;
+                if (X <= 0) {
+                    posmin = 0;
+                    //   std::cout<<"Warning: Set lower pos limit to 0"<<x<<"<=0"<<std::endl;
+                }
+                else {
+                    double j_X = round(sqrt(1 + 8 * X / (_h * _h * _amax[i])) / 2 - 1);
+                    double q_end_X = (-X + _h * _h * _amax[i] * (j_X * (j_X + 1)) / 2) / (_h * (j_X + 1));
+                    posmin = q_end_X - j_X * _amax[i] * _h;
+                }
+            }
+            upper[i] = std::min(accmax, std::min(velmax, posmax));
+            lower[i] = std::max(accmin, std::max(velmin, posmin));
+
+            //upper[i] = (_qmax[i] - q[i]) / _h;
+            //lower[i] = (_qmin[i] - q[i]) / _h;
+
+            if (upper[i] == accmax)
+                _upperLimitType[i] = 'a';
+            else if (upper[i] == velmax)
+                _upperLimitType[i] = 'v';
+            else
+                _upperLimitType[i] = 'q';
+
+            if (lower[i] == accmin)
+                _lowerLimitType[i] = 'a';
+            else if (lower[i] == velmin)
+                _lowerLimitType[i] = 'v';
+            else
+                _lowerLimitType[i] = 'q';
+
+            // Because of numerical uncertainties we need to test whether upper>lower.
+            if (upper[i] < lower[i]) {
+                if (std::abs(upper[i]) < std::abs(lower[i]))
+                    lower[i] = upper[i];
+                else
+                    upper[i] = lower[i];
+                //  std::cout<<"Warning: Upper set to be lower "<<i<<std::endl;
+            }
+            // if (upper(i) == lower(i))
+            // std::cout<<"Warning: Upper and Lower is equal "<<std::endl;
+        }
+    }
+
+    template <size_t N>
+    double QPController<N>::inequalitySolve(const double *G, const double *g0, const double *lower, const double *upper,
+                                            const double *J, const double *tcp_vel, double *res)
+    {
+        if(!_pos_error_flag && !_ori_error_flag)
+        {
+            double CI[2*N*N]{};
+            double ci0[2*N]{};
+            for(size_t i = 0; i < N; i++)
+            {
+                CI[i*N + i] = 1;
+                CI[(i+N)*N + i] = -1;
+                ci0[i] = upper[i];
+                ci0[i + N] = -lower[i];
+            }
+            double mem[2*N*N + 3*N + 8*(0+2*N) + 1]{};
+            return s_quadprog(N, 0, 2*N, G, g0, nullptr, nullptr, CI, ci0, res, mem);
+        }
+        else if(_pos_error_flag && !_ori_error_flag)
+        {
+            double CI[(2*N+6)*N]{};
+            double ci0[2*N+6]{};
+            for(size_t i = 0; i < N; i++)
+            {
+                CI[i*N + i] = 1;
+                CI[(i+N)*N + i] = -1;
+                ci0[i] = upper[i];
+                ci0[i + N] = -lower[i];
+            }
+            s_vc(3*N, J, CI + 2*N*N);
+            s_vc(3*N, -1, J, CI + (2*N+3)*N);
+            for(size_t i = 0; i < 3; i++)
+            {
+                ci0[2*N+i] = _pos_error[i] + tcp_vel[i];
+                ci0[2*N+i+3] = _pos_error[i] - tcp_vel[i];
+            }
+            double mem[2*N*N + 3*N + 8*(0+2*N+6) + 1]{};
+            return s_quadprog(N, 0, 2*N+6, G, g0, nullptr, nullptr, CI, ci0, res, mem);
+        }
+        else if(!_pos_error_flag && _ori_error_flag)
+        {
+            double CI[(2*N+6)*N]{};
+            double ci0[2*N+6]{};
+            for(size_t i = 0; i < N; i++)
+            {
+                CI[i*N + i] = 1;
+                CI[(i+N)*N + i] = -1;
+                ci0[i] = upper[i];
+                ci0[i + N] = -lower[i];
+            }
+            s_vc(3*N, J + 3*N, CI + 2*N*N);
+            s_vc(3*N, -1, J + 3*N, CI + (2*N+3)*N);
+            for(size_t i = 0; i < 3; i++)
+            {
+                ci0[2*N+i] = _ori_error[i] + tcp_vel[i+3];
+                ci0[2*N+i+3] = _ori_error[i] - tcp_vel[i+3];
+            }
+            double mem[2*N*N + 3*N + 8*(0+2*N+6) + 1]{};
+            return s_quadprog(N, 0, 2*N+6, G, g0, nullptr, nullptr, CI, ci0, res, mem);
+        }
+        else
+        {
+            double CI[(2*N+12)*N]{};
+            double ci0[2*N+12]{};
+            for(size_t i = 0; i < N; i++)
+            {
+                CI[i*N + i] = 1;
+                CI[(i+N)*N + i] = -1;
+                ci0[i] = upper[i];
+                ci0[i + N] = -lower[i];
+            }
+            s_vc(6*N, J, CI + 2*N*N);
+            s_vc(6*N, -1, J, CI + (2*N+6)*N);
+            for(size_t i = 0; i < 3; i++)
+            {
+                ci0[2*N+i] = _pos_error[i] + tcp_vel[i];
+                ci0[2*N+i+3] = _ori_error[i] + tcp_vel[i+3];
+                ci0[2*N+i+6] = _pos_error[i] - tcp_vel[i];
+                ci0[2*N+i+9] = _ori_error[i] - tcp_vel[i+3];
+            }
+            double mem[2*N*N + 3*N + 8*(0+2*N+12) + 1]{};
+            return s_quadprog(N, 0, 2*N+12, G, g0, nullptr, nullptr, CI, ci0, res, mem);
+        }
+    }
+
+    template <size_t N>
+    void QPController<N>::getLimitType(char *lowwer, char *upper)
+    {
+        for (size_t i = 0; i < N; i++)
+        {
+            lowwer[i] = _lowerLimitType[i];
+            upper[i] = _upperLimitType[i];
+        }
+    }
+
+} // end namespace
+
+#endif // QPCONTROLLER_HPP

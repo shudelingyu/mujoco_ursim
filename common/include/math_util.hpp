@@ -91,9 +91,23 @@ struct JointController {
         double prev_error = 0.0;   
         double integral = 0.0;
         double max_integral = 100.0;
-        double max_output = 300.0;
+        double max_output = 30.0;
+        double target = 0.0;
+        double current = 0.0;
     } pid;
 };
+
+struct AdmittanceParam
+{
+    std::vector<double> Fe = {0, 0, 0, 0, 0, 0};
+    std::vector<double> M = {1, 1, 1, 1, 1, 1};
+    std::vector<double> B = {10, 10, 10, 10, 10, 10};
+    std::vector<double> K = {30, 30, 30, 30, 30, 30};
+    std::vector<double> xe = {0, 0, 0, 0, 0, 0};
+    std::vector<double> dxe = {0, 0, 0, 0, 0, 0};
+    std::vector<double> ddxe = {0, 0, 0, 0, 0, 0};
+};
+
 
 
 struct ServoSeriesPolynomial3Param
@@ -256,8 +270,9 @@ auto inline s_pm_dot_pm(const double *pm1, const double *pm2, double *pm_out) no
 
 inline std::vector<double> vecxd2stdvec(const Eigen::VectorXd& input){
     std::vector<double> ret;
+    ret.clear();
     for(int i=0;i<input.size();i++){
-        ret[i] = input[i];
+        ret.push_back(input[i]);
     }
     return ret;
 }
@@ -313,115 +328,25 @@ inline Eigen::MatrixXd pinv(Eigen::MatrixXd A)
 
 	return X;
 }
-
-// inline void keyboard(GLFWwindow* window, int key, int scancode, int act, int mods)
-// {
-
-// }
-
-// inline void mouse_button(GLFWwindow* window, int button, int act, int mods)
-// {
-//     // update button state
-    
-//     bool button_left =   (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT)==GLFW_PRESS);
-
-
-//     // // double lastx,lasty; 
-//     // // update mouse position      
-//     // glfwGetCursorPos(window, &lastx, &lasty);
-//     //获取当前鼠标点击位置
-//     if (button_left) {
-//         // 获取点击位置
-//         double x, y;
-//         glfwGetCursorPos(window, &x, &y);
-//         // 转换到归一化坐标
-//         mjrRect viewport = {0, 0, 0, 0};
-//         glfwGetFramebufferSize(window, &viewport.width, &viewport.height);
-//         // find geom and 3D click point, get corresponding body
-//         mjrRect r = pending_.select_state.rect[3];
-//         mjtNum pos[3];
-//         int selgeom, selflex, selskin;
-//         int sel = mjv_select(_mujoco.model, _mujoco.data, &_mujoco.opt,
-//             static_cast<mjtNum>(viewport.width) / viewport.height,
-//             (mjtNum)x/(viewport.width-1),
-//             (mjtNum)(viewport.height-1-y)/(viewport.height-1),
-//             &_mujoco.scn, pos, &selgeom, &selflex, &selskin);
-//         // int sel = mjv_select(m, d, &opt,
-//         //     static_cast<mjtNum>(r.width) / r.height,
-//         //     (pending_.select_state.x - r.left) / r.width,
-//         //     (pending_.select_state.y - r.bottom) / r.height,
-//         //     &scn, pos, &selgeom, &selflex, &selskin);
-//         //std::cout << "Selected: "<< sel << " wrist_3_link "<<mj_name2id(m, mjOBJ_BODY, "wrist_3_link")<< std::endl;
-//         // 如果选中机械臂末端
-//         if (sel == mj_name2id(_mujoco.model, mjOBJ_BODY, "ee_link")) {
-//             // 存储选中状态
-//             _mujoco.pert.active = 1;
-//             mju_copy3(_mujoco.pert.refpos, pos);
-//             ///std::cout << "Selected: "<< pos[0]<<"  "<<pos[1]<<"  "<<pos[2]<< std::endl;
-//         }
-//     }
-//     else {
-//         _mujoco.pert.active = 0;
-//     }
-
-
-// }
-
-
-// // mouse move callback
-// inline void mouse_move(GLFWwindow* window, double xpos, double ypos)
-// {
-//     bool button_left =   (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT)==GLFW_PRESS);
-//     bool button_middle = (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE)==GLFW_PRESS);
-//     bool button_right =  (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT)==GLFW_PRESS);
-
-//     double lastx,lasty; 
-//     // // update mouse position      
-//     glfwGetCursorPos(window, &lastx, &lasty);
-//     // no buttons down: nothing to do
-//     if( !button_left && !button_middle && !button_right )
-//         return;
-
-
-
-//     // compute mouse displacement, save
-//     // double dx = xpos - lastx;
-//     // double dy = ypos - lasty;
-//     double dx = lastx - xpos;
-//     double dy = lasty - ypos;
-//     lastx = xpos;
-//     lasty = ypos;
-
-//     // get current window size
-//     int width, height;
-//     glfwGetWindowSize(window, &width, &height);
-
-//     // get shift key state
-//     bool mod_shift = (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT)==GLFW_PRESS ||
-//                       glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT)==GLFW_PRESS);
-
-//     // determine action based on mouse button
-//     mjtMouse action;
-//     if( button_right )
-//         action = mod_shift ? mjMOUSE_MOVE_H : mjMOUSE_MOVE_V;
-//     else if( button_left )
-//         action = mod_shift ? mjMOUSE_ROTATE_H : mjMOUSE_ROTATE_V;
-//     else
-//         action = mjMOUSE_ZOOM;
-
-//     // move camera
-//     mjv_moveCamera(_mujoco.model, action, dx/height, dy/height, &_mujoco.scn, &_mujoco.cam);
-// }
-
-
-
-
-// // scroll callback
-// inline void scroll(GLFWwindow* window, double xoffset, double yoffset)
-// {
-//     // emulate vertical mouse motion = 5% of window height
-//     mjv_moveCamera(_mujoco.model, mjMOUSE_ZOOM, 0, -0.05*yoffset, &_mujoco.scn, &_mujoco.cam);
-// }
+/*
+	 * s_quadprog 求解二次规划问题
+	 *			min 0.5 x'Gx + g0'x
+	 *				s.t.
+	 *                   CE x == ce0
+	 *                   CI x <= ci0
+	 *	参数说明：
+	 *			nG : dim(x)
+	 *			nCE : 等式约束个数
+	 *			nCI : 不等式约束个数
+	 *   注意： 1、G矩阵必须正定
+	 *		  2、mem为内部只用的内存空间，大小需大于 2*nG*nG + 3*nG + 8*(nCE+nCI)
+	 *		  3、函数内部会更改G、g0、CE、ce0、CI、ci0等矩阵
+	 */
+// inline double s_quadprog(Size nG, Size nCE, Size nCI,
+//     const double *G, const double *g0,
+//     const double *CE, const double *ce0,
+//     const double *CI, const double *ci0,
+//     double *x, double *mem);
 
 // //力旋量
 // inline Eigen::MatrixXd force_to_force(Eigen::MatrixXd &T,Eigen::MatrixXd &force_in_body)
