@@ -522,7 +522,68 @@ namespace mr {
 		return T;
 	}
 
+	/*
+	* Function: Converts a 4x4 transformation matrix (SE(3)) into position and axis-angle representation
+	* Inputs:
+	*  T: A 4x4 transformation matrix in SE(3)
+	* Outputs:
+	*  std::pair<Eigen::Vector3d, Eigen::Vector3d>: 
+	*      - The first element is a 3x1 position vector
+	*      - The second element is a 3x1 axis-angle vector (axis * angle)
+	*/
+	Eigen::VectorXd TransToPosAxisAng(const Eigen::MatrixXd& T){
+		// 提取平移部分
+		Eigen::Vector3d p = T.block<3, 1>(0, 3);
 
+		// 提取旋转矩阵部分
+		Eigen::Matrix3d R = T.block<3, 3>(0, 0);
+	
+		// 计算旋转矩阵的对数
+		Eigen::Matrix3d logR = MatrixLog3(R);
+	
+		// 将对数矩阵转换为轴角表示
+		Eigen::Vector3d axis_angle = so3ToVec(logR);
+		Eigen::VectorXd ret(6);
+		ret << p[0],p[1],p[2],axis_angle[0],axis_angle[1],axis_angle[2];
+		return ret;
+	}
+
+	/*
+	* Function: Converts position and axis-angle representation to a 4x4 transformation matrix (SE(3))
+	* Inputs:
+	*  pos: A 3x1 position vector
+	*  axis_angle: A 3x1 axis-angle vector (axis * angle)
+	* Outputs:
+	*  Eigen::Matrix4d: A 4x4 transformation matrix in SE(3)
+	*/
+	Eigen::MatrixXd PosAxisAngToTrans(const Eigen::VectorXd& PosAxisAng) {
+		Eigen::MatrixXd T = Eigen::Matrix4d::Identity();
+
+		Eigen::Vector3d axis_angle = Eigen::Vector3d(PosAxisAng[3],PosAxisAng[4],PosAxisAng[5]);
+		Eigen::Vector3d pos = Eigen::Vector3d(PosAxisAng[0],PosAxisAng[1],PosAxisAng[2]);
+		// 提取旋转轴和旋转角度
+		double theta = axis_angle.norm();
+		Eigen::Vector3d axis = axis_angle.normalized();
+
+		// 计算旋转矩阵
+		Eigen::Matrix3d R;
+		if (theta < 1e-6) {
+			R = Eigen::Matrix3d::Identity(); // 角度接近 0 时，旋转矩阵为单位矩阵
+		} else {
+			Eigen::Matrix3d skew_axis;
+			skew_axis << 0, -axis.z(), axis.y(),
+						axis.z(), 0, -axis.x(),
+						-axis.y(), axis.x(), 0;
+			R = Eigen::Matrix3d::Identity() + sin(theta) * skew_axis + (1 - cos(theta)) * skew_axis * skew_axis;
+		}
+
+		// 填充齐次变换矩阵
+		T.block<3, 3>(0, 0) = R;
+		T.block<3, 1>(0, 3) = pos;
+
+		return T;
+	}
+	
 	/* Function: Gives the space Jacobian
 	 * Inputs: Screw axis in home position, joint configuration
 	 * Returns: 6xn Spatial Jacobian

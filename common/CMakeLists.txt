@@ -6,6 +6,8 @@ project(common)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(ACSP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../ACSP)
+
 set(MUJOCO_DIR "~/.mujoco/mujoco-3.2.7")  # 版本号需与实际安装一致
 include_directories(${MUJOCO_DIR}/include)
 link_directories(${MUJOCO_DIR}/bin)
@@ -18,7 +20,7 @@ find_package(Eigen3 REQUIRED)
 
 # 设置公共头文件目录
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-
+include_directories(${ACSP_DIR}/src ${ACSP_DIR}/FastMath)
 file(GLOB SOURCES 
     ${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp

@@ -52,7 +52,7 @@ Eigen::MatrixXd ur_frame::forward_kinematics(const mjModel* m,mjData* d){
     Eigen::VectorXd thetaList(6);
     thetaList << d->qpos[0], d->qpos[1], d->qpos[2],
     d->qpos[3], d->qpos[4], d->qpos[5];
-    std::cout<<"act_q"<<thetaList.transpose()<<std::endl;
+    // std::cout<<"act_q"<<thetaList.transpose()<<std::endl;
     Eigen::MatrixXd FKCal = mr::FKinSpace(M, Slist, thetaList);
 
     // std::cout << "FKCals :" << std::endl;
@@ -229,7 +229,7 @@ Eigen::VectorXd ur_frame::inverse_kinematics(const mjModel* m,mjData* d,Eigen::M
 }
 
 
-bool ur_frame::inverse_kinematics(const double* flange_pose, const vec3_t &sign_sln, const double &q6_des, std::vector<double> &sln)
+bool ur_frame::inverse_kinematics(const tf_t flange_pose, const vec3_t &sign_sln, const double &q6_des, std::vector<double> &sln)
 {
 	sln.resize(6);
 	//
@@ -240,13 +240,8 @@ bool ur_frame::inverse_kinematics(const double* flange_pose, const vec3_t &sign_
 	double a3 = -param.L2;
 	double a2 = -param.L1;
 
-    double nx = flange_pose[0], ny = flange_pose[4], nz = flange_pose[8];
-    double ox = flange_pose[1], oy = flange_pose[5], oz = flange_pose[9];
-    double ax = flange_pose[2], ay = flange_pose[6], az = flange_pose[10];
-    double px = flange_pose[3], py = flange_pose[7], pz = flange_pose[11];
-	// 计算q1-机座
-	double A = d6 * ay - py;
-	double B = d6 * ax - px;
+    double A = d6 * flange_pose(1, 2) - flange_pose(1, 3);
+	double B = d6 * flange_pose(0, 2) - flange_pose(0, 3);
 	double R = A * A + B * B;
 	if (is_zero(A)) {
 		double div;
@@ -284,7 +279,7 @@ bool ur_frame::inverse_kinematics(const double* flange_pose, const vec3_t &sign_
 		sln[0] = pn;
 	}
 	// 计算q5-腕2
-	double numer = (px * sin(sln[0]) - py * cos(sln[0]) - d4);
+	double numer = (flange_pose(0, 3) * sin(sln[0]) - flange_pose(1, 3) * cos(sln[0]) - d4);
 	double div;
 	if (is_same(fabs(numer), fabs(d6)))
 		div = SIGN(numer) * SIGN(d6);
@@ -302,18 +297,18 @@ bool ur_frame::inverse_kinematics(const double* flange_pose, const vec3_t &sign_
 		sln[5] = q6_des;
 	}
 	else {
-		sln[5] = atan2(SIGN(s5) * -(ox * s1 - oy * c1), SIGN(s5) * (nx * s1 - ny * c1));
+		sln[5] = atan2(SIGN(s5) * -(flange_pose(0, 1) * s1 - flange_pose(1, 1) * c1), SIGN(s5) * (flange_pose(0, 0) * s1 - flange_pose(1, 0) * c1));
 		if (fabs(sln[5]) < ZERO_THRESH)
 			sln[5] = 0.0;
 	}
 	// 计算q2,q3,q4
 	double c6 = cos(sln[5]), s6 = sin(sln[5]);
-	double x04x = -s5 * (ax * c1 + ay * s1) -
-				  c5 * (s6 * (ox * c1 + oy * s1) - c6 * (nx * c1 + ny * s1));
-	double x04y = c5 * (nz * c6 - oz * s6) - az * s5;
-	double p13x = d5 * (s6 * (nx * c1 + ny * s1) + c6 * (ox * c1 + oy * s1)) -
-				  d6 * (ax * c1 + ay * s1) + px * c1 + py * s1;
-	double p13y = pz - d1 - d6 * az + d5 * (oz * c6 + nz * s6);
+	double x04x = -s5 * (flange_pose(0, 2) * c1 + flange_pose(1, 2) * s1) -
+				  c5 * (s6 * (flange_pose(0, 1) * c1 + flange_pose(1, 1) * s1) - c6 * (flange_pose(0, 0) * c1 + flange_pose(1, 0) * s1));
+	double x04y = c5 * (flange_pose(2, 0) * c6 - flange_pose(2, 1) * s6) - flange_pose(2, 2) * s5;
+	double p13x = d5 * (s6 * (flange_pose(0, 0) * c1 + flange_pose(1, 0) * s1) + c6 * (flange_pose(0, 1) * c1 + flange_pose(1, 1) * s1)) -
+				  d6 * (flange_pose(0, 2) * c1 + flange_pose(1, 2) * s1) + flange_pose(0, 3) * c1 + flange_pose(1, 3) * s1;
+	double p13y = flange_pose(2, 3) - d1 - d6 * flange_pose(2, 2) + d5 * (flange_pose(2, 1) * c6 + flange_pose(2, 0) * s6);
 
 	double c3 = (p13x * p13x + p13y * p13y - a2 * a2 - a3 * a3) / (2.0 * a2 * a3);
 	if (is_same(fabs(c3), 1.0))
@@ -339,7 +334,7 @@ bool ur_frame::inverse_kinematics(const double* flange_pose, const vec3_t &sign_
 	return true;
 }
 
-bool ur_frame::inverse_kinematics(const double *flange_pose, std::vector<std::vector<double>> &slns)
+bool ur_frame::inverse_kinematics(const tf_t flange_pose, std::vector<std::vector<double>> &slns)
 {
 	std::vector<vec3_t> sign_slns = {{1, 1, 1}, {1, 1, -1}, {1, -1, 1}, {1, -1, -1}, {-1, -1, -1}, {-1, -1, 1}, {-1, 1, -1}, {-1, 1, 1}};
 	slns.clear();
@@ -435,14 +430,17 @@ Eigen::VectorXd ur_frame::select_sln(const double *ee_pm,mjData* d)
     double diff_norm[8];
     // double ans_pos[6];
     Eigen::VectorXd thetaList(6);
-
+    std::cout<<"all_sln:"<<std::endl;
     for (int i = 0; i < 8; ++i)
     {
         if (inverse_kinematics(ee_pm, i, diff_q[solution_num]))
         {
+            
             diff_norm[solution_num] = 0;
             for (int j = 0; j < 6; ++j)
             {
+                std::cout<<diff_q[solution_num][j]<<"  ";
+
                 diff_q[solution_num][j] -= d->qpos[j];
     
                 while (diff_q[solution_num][j] > M_PI) diff_q[solution_num][j] -= 2 * M_PI;
@@ -450,11 +448,10 @@ Eigen::VectorXd ur_frame::select_sln(const double *ee_pm,mjData* d)
     
                 diff_norm[solution_num] += std::abs(diff_q[solution_num][j]);
             }
-    
             ++solution_num;
         }
+        std::cout<<std::endl;
     }
-
     //if (solution_num == 0) return -1;
     auto real_solution = std::min_element(diff_norm, diff_norm + solution_num) - diff_norm;
     //选解策略（距离最近）
@@ -476,7 +473,7 @@ Eigen::VectorXd ur_frame::select_sln(const double *ee_pm,mjData* d)
     return thetaList;
 }
 
-bool ur_frame::select_sln(const double *ee_pm,mjData* d,std::vector<double> &sln){
+bool ur_frame::select_sln(const tf_t ee_pm,mjData* d,std::vector<double> &sln){
     std::vector<std::vector<double>> slns;
     std::vector<double> cur_q = double2stdvec(d->qpos,6);
 
@@ -516,7 +513,11 @@ bool ur_frame::__convert_sln(const std::vector<double> &joint,std::vector<double
 bool ur_frame::__sort_slns(const std::vector<double> &joint,std::vector<std::vector<double>>  &slns){
     std::multimap<double, std::vector<double>> cost_slns;
     std::vector<std::vector<double>> tmp_slns = slns;
+    std::cout<<"all_sln2"<<std::endl;
     for(auto &sln:slns){
+        for(auto &i:sln)
+            std::cout<<i<<"  ";
+        std::cout<<std::endl;    
         if(!__convert_sln(joint,sln))
             return false;
         cost_slns.insert(std::make_pair(distance(joint,sln),sln));

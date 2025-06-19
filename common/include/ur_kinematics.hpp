@@ -27,10 +27,10 @@ public:
     Eigen::MatrixXd jacobian_space(const mjModel* m,mjData* d);
     Eigen::MatrixXd jacobian_body(const mjModel* m,mjData* d);
     Eigen::VectorXd inverse_kinematics(const mjModel* m,mjData* d,Eigen::MatrixXd T);
-    bool inverse_kinematics(const double* flange_pose, const vec3_t &sign_sln, const double &q6_des, std::vector<double> &sln);
-    bool inverse_kinematics(const double *flange_pose, std::vector<std::vector<double>> &slns);
+    bool inverse_kinematics(const tf_t flange_pose, const vec3_t &sign_sln, const double &q6_des, std::vector<double> &sln);
+    bool inverse_kinematics(const tf_t flange_pose, std::vector<std::vector<double>> &slns);
     bool inverse_kinematics(const double *ee_pm, int which_root, double *input);
-    bool select_sln(const double *ee_pm,mjData* d,std::vector<double> &sln);
+    bool select_sln(const tf_t ee_pm,mjData* d,std::vector<double> &sln);
     Eigen::VectorXd select_sln(const double *ee_pm,mjData* d);
 
 private:

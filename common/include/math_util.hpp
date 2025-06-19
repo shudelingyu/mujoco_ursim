@@ -17,13 +17,13 @@ inline constexpr double ZERO_THRESH = 0.0000000001;
 typedef std::size_t Size;
 typedef Eigen::VectorXd vec_t;
 typedef Eigen::Vector3d vec3_t;
-typedef Eigen::Affine3d tf_t;
+typedef Eigen::MatrixXd tf_t;
 // extern double lastx,lasty;
 
 struct initmujoco
 {
-    std::string path = "/home/wtc/ur5_test/";
-    std::string xmlfile = "ur5.xml";
+    std::string path = "/home/wtc/mujoco_ursim/";
+    std::string xmlfile = "model/ur5.xml";
     std::string datafile = "data.csv";
     double simend = 20;
     double r = 0.5;
@@ -285,6 +285,16 @@ inline Eigen::VectorXd stdvec2vecxd(const std::vector<double>& input){
     return ret;
 }
 
+inline void MatrixXdToDoubleArray(const Eigen::MatrixXd& matrix, double* output) {
+    int rows = matrix.rows();
+    int cols = matrix.cols();
+    for (int i = 0; i < rows; ++i) {
+        for (int j = 0; j < cols; ++j) {
+            output[i * cols + j] = matrix(i, j);
+        }
+    }
+}
+
 inline std::vector<double> double2stdvec(const double* input,const int &n){
     std::vector<double> ret;
     ret.clear();
@@ -293,6 +303,7 @@ inline std::vector<double> double2stdvec(const double* input,const int &n){
     }
     return ret;
 }
+
 
 inline double distance(const std::vector<double> &q1,const std::vector<double> &q2){
     if(q1.size()!=q2.size())

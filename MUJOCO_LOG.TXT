@@ -7,3 +7,24 @@ ERROR: an OpenGL platform library has not been loaded into this process, this mo
 Tue Apr 22 11:00:29 2025
 ERROR: an OpenGL platform library has not been loaded into this process, this most likely means that a valid OpenGL context has not been created before mjr_makeContext was called
 
+Sat Apr 26 17:42:57 2025
+WARNING: Nan, Inf or huge value in CTRL at ACTUATOR 2. The simulation is unstable. Time = 0.0000.
+
+Sat Apr 26 17:44:18 2025
+WARNING: Nan, Inf or huge value in CTRL at ACTUATOR 2. The simulation is unstable. Time = 0.0000.
+
+Sat Apr 26 17:44:38 2025
+WARNING: Nan, Inf or huge value in CTRL at ACTUATOR 2. The simulation is unstable. Time = 0.0000.
+
+Sat Apr 26 17:45:05 2025
+WARNING: Nan, Inf or huge value in CTRL at ACTUATOR 2. The simulation is unstable. Time = 0.0000.
+
+Sun Apr 27 09:35:00 2025
+WARNING: Nan, Inf or huge value in CTRL at ACTUATOR 2. The simulation is unstable. Time = 0.0000.
+
+Sun Apr 27 09:35:38 2025
+WARNING: Nan, Inf or huge value in CTRL at ACTUATOR 2. The simulation is unstable. Time = 0.0000.
+
+Thu Jun 19 13:05:11 2025
+ERROR: Load model error: ParseXML: Error opening file '/home/wtc/ur5_test/model/ur5.xml': No such file or directory
+

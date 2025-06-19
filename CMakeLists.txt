@@ -5,6 +5,7 @@ project(mujoco_ursim)
 
 
 add_subdirectory(common)
+add_subdirectory(ACSP)
 
 # 添加子项目
 # add_subdirectory(test1)

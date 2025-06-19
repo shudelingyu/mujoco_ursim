@@ -8,7 +8,7 @@
 #include "mujoco_view.hpp"
 
 using namespace mr;
-Controller m_controller;
+Controller& m_controller = Controller::getInstance();
 Planning plan;
 initmujoco initmu;
 MjWrapper _mujoco;
@@ -20,11 +20,12 @@ AdmittanceParam Param;
  //double qinit[6] ={0, -2.55, -0.785, 0, 0, 0};
 //double qinit[6] = {0,-1,0,1,0,0};
 // const double qinit[6] = {0,0,0,0,0,0};
-double qinit[6] ={-0.785, -2.55, -0.785, -4.71, -1.57, 0};
+// double qinit[6] ={-0.785, -2.55, -0.785, -4.71, -1.57, 0};
+// double qinit[6] ={0, -1, 1.57, 0, -1.57, 0};
 
 // double qinit[6] = {M_PI*0.5,M_PI*0.5,M_PI*0.5,M_PI*0.5,M_PI*0.5,0};
-//double qinit[6] = {-M_PI*0.5,-M_PI*0.5,0,-M_PI*0.5,0,0};
-//double qinit[6] = {0,-M_PI*0.5,M_PI*0.5,0,M_PI*0.5,0};
+// double qinit[6] = {-M_PI*0.5,-M_PI*0.5,0,-M_PI*0.5,0,0};
+double qinit[6] = {0,-M_PI*0.4,M_PI*0.4,M_PI*0.45,M_PI*0.5,0};
 // double qinit[6] ={-0.785, -2.55, -0.785, -4.71, -1.57, 0};
 //frequency at which data is written to a file
 
@@ -89,7 +90,10 @@ void init_controller(const mjModel* m, mjData* d)
     double joint_Kvd[] = {10, 10, 10, 10, 10, 10};
     double joint_vellimit[] = {120, 120, 120, 120, 120, 120};
 
-    Param.Fe = {0,0,0,10,0,0};
+    Param.Fe = {0,0,5,0,0,0};
+    Param.K = {10, 30, 30, 10, 10, 10};
+    Param.B = {10, 10, 5, 10, 10, 10};
+
 
     for (int i = 0; i < m->nu; i++)
     {

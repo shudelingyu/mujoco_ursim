@@ -2,6 +2,7 @@
 // #include <glad/glad.h>  
 #include <mujoco/mujoco.h>
 #include "math_util.hpp"
+#include "controller.hpp"
 #include <iostream>
 
 class MuJoCoViewer {
@@ -63,7 +64,7 @@ public:
 
         // 存储初始相机参数
         // double arr_view[] = {1, 1, 2, 0.0, 0.0, 0.0};
-        std::copy(arr_view, arr_view+6, initial_cam_);
+        // std::copy(arr_view, arr_view+6, initial_cam_);
         // 方法1：禁用所有接触约束,使得constraint为0
         model_->opt.disableflags |= mjDSBL_CONSTRAINT;
     }
@@ -147,14 +148,14 @@ private:
             // 完全重置到初始状态
             mj_copyData(viewer->data_, viewer->model_, viewer->initial_state_);
             mj_forward(viewer->model_, viewer->data_);
-            
+            Controller::getInstance().reset();
             // 恢复相机参数
-            viewer->cam_.azimuth = viewer->initial_cam_[0];
-            viewer->cam_.elevation = viewer->initial_cam_[1];
-            viewer->cam_.distance = viewer->initial_cam_[2];
-            viewer->cam_.lookat[0] = viewer->initial_cam_[3];
-            viewer->cam_.lookat[1] = viewer->initial_cam_[4];
-            viewer->cam_.lookat[2] = viewer->initial_cam_[5];
+            // viewer->cam_.azimuth = viewer->initial_cam_[0];
+            // viewer->cam_.elevation = viewer->initial_cam_[1];
+            // viewer->cam_.distance = viewer->initial_cam_[2];
+            // viewer->cam_.lookat[0] = viewer->initial_cam_[3];
+            // viewer->cam_.lookat[1] = viewer->initial_cam_[4];
+            // viewer->cam_.lookat[2] = viewer->initial_cam_[5];
         }
         
         // 添加空格键暂停控制

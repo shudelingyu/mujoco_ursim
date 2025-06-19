@@ -155,6 +155,27 @@ Eigen::MatrixXd FKinSpace(const Eigen::MatrixXd&, const Eigen::MatrixXd&, const 
  */
 Eigen::MatrixXd FKinBody(const Eigen::MatrixXd&, const Eigen::MatrixXd&, const Eigen::VectorXd&);
 
+/*
+ * Function: Converts a 4x4 transformation matrix (SE(3)) into position and axis-angle representation
+ * Inputs:
+ *  T: A 4x4 transformation matrix in SE(3)
+ * Outputs:
+ *  std::pair<Eigen::Vector3d, Eigen::Vector3d>: 
+ *      - The first element is a 3x1 position vector
+ *      - The second element is a 3x1 axis-angle vector (axis * angle)
+ */
+Eigen::VectorXd TransToPosAxisAng(const Eigen::MatrixXd& T);
+
+/*
+	* Function: Converts position and axis-angle representation to a 4x4 transformation matrix (SE(3))
+	* Inputs:
+	*  pos: A 3x1 position vector
+	*  axis_angle: A 3x1 axis-angle vector (axis * angle)
+	* Outputs:
+	*  Eigen::Matrix4d: A 4x4 transformation matrix in SE(3)
+	*/
+Eigen::MatrixXd PosAxisAngToTrans(const Eigen::VectorXd& PosAxisAng);
+
 
 /*
  * Function: Gives the space Jacobian

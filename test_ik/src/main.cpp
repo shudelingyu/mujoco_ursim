@@ -8,7 +8,7 @@
 #include "mujoco_view.hpp"
 
 using namespace mr;
-Controller m_controller;
+Controller& m_controller = Controller::getInstance();
 Planning plan;
 initmujoco initmu;
 ServoSeriesPolynomial3Param param;
@@ -39,18 +39,22 @@ void controller(const mjModel* m, mjData* d) {
     //正动力学计算
     //mj_forward(m,d);
     //FK
-    Eigen::MatrixXd ans=ur_kin->forward_kinematics(m,d);
+    Eigen::MatrixXd cur_ee=ur_kin->forward_kinematics(m,d);
+    std::cout<<"cur_ee"<<std::endl<<cur_ee.matrix()<<std::endl;
     double ee_pm[16]{ 0 };
-    for (int i = 0; i < 4; i++) {
-        for (int  j= 0; j < 4; j++)
-        {
-            ee_pm[i+j] = ans(i,j);
-            std::cout << ans(i,j) << " ";
-        }
-        std::cout<<std::endl;
+    MatrixXdToDoubleArray(cur_ee,ee_pm); 
+    for (int i = 0; i < 16; ++i) {
+        std::cout << ee_pm[i] << " ";
+        if ((i + 1) % 4 == 0) std::cout << std::endl;
     }
     //Ik
     Eigen::VectorXd thetaList=ur_kin->select_sln(ee_pm,d);
+    std::cout<<"tar_q"<<thetaList.transpose().matrix()<<std::endl;
+    std::vector<double> sln;
+    if(!ur_kin->select_sln(cur_ee,d,sln))
+        std::cout<<"no inverse"<<std::endl;
+    else
+        std::cout<<"tar_q2"<<stdvec2vecxd(sln).transpose().matrix()<<std::endl;
 
 
 
@@ -84,12 +88,12 @@ void controller(const mjModel* m, mjData* d) {
             case POSITION_CONTROL: {
                 // ctrl.target_pos=0 + 0.5*sin(2*M_PI*0.5*time);/* code */
                 // ctrl.target_vel=0 + 2*M_PI*0.5*0.5*cos(2*M_PI*0.5*time);/* code */
-                double pos_error = ctrl.target_pos - d->qpos[i];
-                double pos_control=ctrl.pid.Kpp * pos_error;
-                //pos_control=std::clamp(pos_control,-ctrl.vel_limit,ctrl.vel_limit);
-                //tor_limit
-                double vel_error = ctrl.target_vel - d->qvel[i];
-                double vel_control=ctrl.pid.Kpd* vel_error;
+                // double pos_error = ctrl.target_pos - d->qpos[i];
+                // double pos_control=ctrl.pid.Kpp * pos_error;
+                // //pos_control=std::clamp(pos_control,-ctrl.vel_limit,ctrl.vel_limit);
+                // //tor_limit
+                // double vel_error = ctrl.target_vel - d->qvel[i];
+                // double vel_control=ctrl.pid.Kpd* vel_error;
                 //pd控制
                 // d->qpos[i] = qinit[i];
                 // d->ctrl[i] = pos_control + vel_control+d->qfrc_bias[i];
@@ -136,20 +140,20 @@ void controller(const mjModel* m, mjData* d) {
     }
     // std::cout<<std::endl;
 
-    //设置模型的位置、速度、加速度，进行逆动力学计算
+    // 设置模型的位置、速度、加速度，进行逆动力学计算
     // mju_copy(d->qpos, target_pos, m->nq);
     // mju_copy(d->qvel, target_vel, m->nv);
     // mju_copy(d->qacc, target_acc, m->nv);
 
-    // 逆动力学控制，计算关节力矩
-    mj_inverse(m,d);
-    for (size_t i = 0; i < 6; i++)
-    {
-        //d->ctrl[i] = d->ctrl[i]+d->qfrc_inverse[i];
-        // d->ctrl[i] = d->ctrl[i]+d->qfrc_bias[i];
-        //d->ctrl[i] = d->ctrl[i];
-        //d->ctrl[i] = d->qfrc_bias[i];
-    }
+    // // 逆动力学控制，计算关节力矩
+    // mj_inverse(m,d);
+    // for (size_t i = 0; i < 6; i++)
+    // {
+    //     //d->ctrl[i] = d->ctrl[i]+d->qfrc_inverse[i];
+    //     d->ctrl[i] = d->ctrl[i]+d->qfrc_bias[i];
+    //     //d->ctrl[i] = d->ctrl[i];
+    //     //d->ctrl[i] = d->qfrc_bias[i];
+    // }
 }
 
 void init_controller(const mjModel* m, mjData* d)
