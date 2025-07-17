@@ -65,6 +65,7 @@
         "*.bak": "cpp",
         "ios": "cpp",
         "variant": "cpp",
-        "cassert": "cpp"
+        "cassert": "cpp",
+        "cholesky": "cpp"
     },
 }

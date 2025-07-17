@@ -6,6 +6,7 @@
 #include "ur_kinematics.hpp"
 #include "controller.hpp"
 #include "mujoco_view.hpp"
+#include "inputshaper.hpp"
 
 using namespace mr;
 Controller& m_controller = Controller::getInstance();
@@ -13,6 +14,8 @@ Planning plan;
 initmujoco initmu;
 ServoSeriesPolynomial3Param param;
 MjWrapper _mujoco;
+InputShaper inputshaper;
+
 
 
 //Change the path <template_writeData>
@@ -39,24 +42,24 @@ void controller(const mjModel* m, mjData* d) {
     //正动力学计算
     //mj_forward(m,d);
     //FK
-    Eigen::MatrixXd cur_ee=ur_kin->forward_kinematics(m,d);
-    std::cout<<"cur_ee"<<std::endl<<cur_ee.matrix()<<std::endl;
-    double ee_pm[16]{ 0 };
-    MatrixXdToDoubleArray(cur_ee,ee_pm); 
-    for (int i = 0; i < 16; ++i) {
-        std::cout << ee_pm[i] << " ";
-        if ((i + 1) % 4 == 0) std::cout << std::endl;
-    }
-    //Ik
-    Eigen::VectorXd thetaList=ur_kin->select_sln(ee_pm,d);
-    std::cout<<"tar_q"<<thetaList.transpose().matrix()<<std::endl;
-    std::vector<double> sln;
-    if(!ur_kin->select_sln(cur_ee,d,sln))
-        std::cout<<"no inverse"<<std::endl;
-    else
-        std::cout<<"tar_q2"<<stdvec2vecxd(sln).transpose().matrix()<<std::endl;
+    // Eigen::MatrixXd cur_ee=ur_kin->forward_kinematics(m,d);
+    // std::cout<<"cur_ee"<<std::endl<<cur_ee.matrix()<<std::endl;
+    // double ee_pm[16]{ 0 };
+    // MatrixXdToDoubleArray(cur_ee,ee_pm); 
+    // for (int i = 0; i < 16; ++i) {
+    //     std::cout << ee_pm[i] << " ";
+    //     if ((i + 1) % 4 == 0) std::cout << std::endl;
+    // }
+    // //Ik
+    // Eigen::VectorXd thetaList=ur_kin->select_sln(ee_pm,d);
+    // std::cout<<"tar_q"<<thetaList.transpose().matrix()<<std::endl;
+    // std::vector<double> sln;
+    // if(!ur_kin->select_sln(cur_ee,d,sln))
+    //     std::cout<<"no inverse"<<std::endl;
+    // else
+    //     std::cout<<"tar_q2"<<stdvec2vecxd(sln).transpose().matrix()<<std::endl;
 
-
+    // std::cout<<"time=========="<<time <<std::endl;
 
     // 逆动力学求解
     //mj_inverse(m,d);
@@ -71,6 +74,13 @@ void controller(const mjModel* m, mjData* d) {
         auto& ctrl = m_controller.get_ctrl()->joints[i];
 
         ctrl.target_pos= plan.CubicSpline_at(param.time_whole.size(), param.time_whole.data(), param.pos[i].data(), param.vel[i].data(), param.pos_p1[i].data(), param.pos_p2[i].data(), param.pos_p3[i].data(), time);
+        if(i==1){
+            if(ctrl.target_pos<=1e-7)
+                std::cout<<"time=========="<<time <<std::endl;
+            // ctrl.target_pos = inputshaper.process(ctrl.target_pos);
+        }
+
+        
         ctrl.pid.target = ctrl.target_pos;
         ctrl.pid.current = d->qpos[i];
         switch (ctrl.mode) {
@@ -276,6 +286,8 @@ void init_controller(const mjModel* m, mjData* d)
     for (int i = 0; i < m->nu; i++)
         plan.CubicSpline(param.time_whole.size(), param.time_whole.data(), param.pos[i].data(), param.vel[i].data(), param.pos_p1[i].data(), param.pos_p2[i].data(), param.pos_p3[i].data());
 
+        ShapedImpulse shaperParam = inputshaper.shaperGenerator(ShaperType::ZV,7,0.12);
+        inputshaper.init(shaperParam.amplitudes,shaperParam.times,0.002);
 }
 
 //************************

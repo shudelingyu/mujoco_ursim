@@ -7,13 +7,12 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # MuJoCo路径配置
-set(MUJOCO_DIR "~/.mujoco/mujoco-3.2.7")  # 版本号需与实际安装一致
 include_directories(${MUJOCO_DIR}/include)
 link_directories(${MUJOCO_DIR}/bin)
 
 # 第三方库配置
-find_package(OpenGL REQUIRED)
-find_package(glfw3 REQUIRED)
+# find_package(OpenGL REQUIRED)
+# find_package(glfw3 REQUIRED)
 # find_package(Eigen3 REQUIRED)
 
 # 构建目标
@@ -29,15 +28,33 @@ target_include_directories(test_ik PRIVATE ${CMAKE_SOURCE_DIR}/common/include)
 # 引入 common 库
 target_link_libraries(test_ik common)
 
-target_link_libraries(test_ik
-    glfw
-    ${OPENGL_LIBRARIES}
-    GL
-    GLEW
-)
+if(WIN32)
+    find_package(OpenGL REQUIRED)
+    # find_package(glad REQUIRED)
+    include_directories(${glfw_ROOT}/include)
+    # find_package(GLEW REQUIRED)
+    include_directories(${GLEW_ROOT}/include)
+    find_package(Eigen3 REQUIRED NO_MODULE)
+    include_directories(${qpOASES_ROOT}/include)
+elseif(UNIX)
+    find_package(OpenGL REQUIRED)
+    # find_package(glad REQUIRED)
+    find_package(glfw3 REQUIRED)
+    find_package(Eigen3 REQUIRED)
+    find_package(qpOASES REQUIRED)
+endif()
 
 
-set(CMAKE_EXE_LINKER_FLAGS "-Wl,-rpath,${MUJOCO_DIR}/bin")
+if(WIN32)
+    # 编译完成后自动复制 DLL
+    add_custom_command(TARGET test_ik POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+            "${MUJOCO_DIR}/bin/mujoco.dll"
+            "$<TARGET_FILE_DIR:test_ik>"
+        COMMENT "Copying mujoco.dll to output directory"
+    )
+elseif(UNIX)
+    set(CMAKE_EXE_LINKER_FLAGS "-Wl,-rpath,${MUJOCO_DIR}/bin")
+endif()
 # 资源文件处理
 #file(COPY models DESTINATION ${CMAKE_BINARY_DIR})
-
