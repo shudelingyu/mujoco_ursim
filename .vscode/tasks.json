@@ -2,18 +2,18 @@
     "version": "2.0.0",
     "tasks": [
       {
-        "label": "build mujoco_run",
+        "label": "build Main",
         "type": "shell",
         "command": "cmake",
         "args": [
             "--build", "${workspaceFolder}/build",
-            "--target", "mujoco_run"
+            "--target", "Main"
         ],
         "group": {
             "kind": "build",
             "isDefault": true
         },
-        "detail": "Build the mujoco_run target using CMake"
+        "detail": "Build the Main target using CMake"
       }   
     ]
   }

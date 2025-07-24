@@ -1,34 +1,11 @@
 {
     "version": "0.2.0",
-    "configurations": [
+    "configurations": [     
       {
-        "name": "Debug cartesian_admittance",
+        "name": "Debug Main",
         "type": "cppdbg",
         "request": "launch",
-        "program": "${workspaceFolder}/build/cartesian_admittance/cartesian_admittanced",
-        "args": [],
-        "stopAtEntry": false,
-        "cwd": "${workspaceFolder}",
-        "environment": [],
-        "externalConsole": false,
-        "MIMode": "gdb",
-        "setupCommands": [
-          {
-            "description": "Enable pretty-printing for gdb",
-            "text": "-enable-pretty-printing",
-            "ignoreFailures": true
-          }
-        ],
-        "miDebuggerPath": "/usr/bin/gdb",  // GDB 调试器的路径
-        "preLaunchTask": "build cartesian_admittance"  // 如果你有对应的构建任务，可以设置
-        // "serverLaunchTimeout": 20000
-      },
-      
-      {
-        "name": "Debug mujoco_run",
-        "type": "cppdbg",
-        "request": "launch",
-        "program": "${workspaceFolder}/build/mujoco_run/mujoco_rund",
+        "program": "${workspaceFolder}/build/Main/Maind",
         "args": [],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
@@ -43,7 +20,7 @@
           }
         ],
         "miDebuggerPath": "/usr/bin/gdb",
-        "preLaunchTask": "build mujoco_run"
+        "preLaunchTask": "build Main"
       }
     ]
   }

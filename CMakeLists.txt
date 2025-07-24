@@ -27,7 +27,7 @@ add_subdirectory(common)
 add_subdirectory(algorithm)
 
 # 添加子项目
-add_subdirectory(mujoco_run)
+add_subdirectory(Main)
 
 
 
