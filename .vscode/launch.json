@@ -25,10 +25,10 @@
       },
       
       {
-        "name": "Debug test_ik",
+        "name": "Debug mujoco_run",
         "type": "cppdbg",
         "request": "launch",
-        "program": "${workspaceFolder}/build/test_ik/test_ikd",
+        "program": "${workspaceFolder}/build/mujoco_run/mujoco_rund",
         "args": [],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
@@ -43,175 +43,7 @@
           }
         ],
         "miDebuggerPath": "/usr/bin/gdb",
-        "preLaunchTask": "build test_ik"
-      },
-      {
-        "name": "Debug test_Cartesian_DragInCST",
-        "type": "cppdbg",
-        "request": "launch",
-        "program": "${workspaceFolder}/build/test_Cartesian_DragInCST/test_Cartesian_DragInCSTd",
-        "args": [],
-        "stopAtEntry": false,
-        "cwd": "${workspaceFolder}",
-        "environment": [],
-        "externalConsole": false,
-        "MIMode": "gdb",
-        "setupCommands": [
-          {
-            "description": "Enable pretty-printing for gdb",
-            "text": "-enable-pretty-printing",
-            "ignoreFailures": true
-          }
-        ],
-        "miDebuggerPath": "/usr/bin/gdb",
-        "preLaunchTask": "build test_Cartesian_DragInCST"
-      },
-      {
-        "name": "Debug test_Cartesian_impdance",
-        "type": "cppdbg",
-        "request": "launch",
-        "program": "${workspaceFolder}/build/test_Cartesian_impdance/test_Cartesian_impdanced",
-        "args": [],
-        "stopAtEntry": false,
-        "cwd": "${workspaceFolder}",
-        "environment": [],
-        "externalConsole": false,
-        "MIMode": "gdb",
-        "setupCommands": [
-          {
-            "description": "Enable pretty-printing for gdb",
-            "text": "-enable-pretty-printing",
-            "ignoreFailures": true
-          }
-        ],
-        "miDebuggerPath": "/usr/bin/gdb",
-        "preLaunchTask": "build test_Cartesian_impdance"
-      },
-      {
-        "name": "Debug test_Cartesian-Trajectory",
-        "type": "cppdbg",
-        "request": "launch",
-        "program": "${workspaceFolder}/build/test_Cartesian-Trajectory/test_Cartesian-Trajectoryd",
-        "args": [],
-        "stopAtEntry": false,
-        "cwd": "${workspaceFolder}",
-        "environment": [],
-        "externalConsole": false,
-        "MIMode": "gdb",
-        "setupCommands": [
-          {
-            "description": "Enable pretty-printing for gdb",
-            "text": "-enable-pretty-printing",
-            "ignoreFailures": true
-          }
-        ],
-        "miDebuggerPath": "/usr/bin/gdb",
-        "preLaunchTask": "build test_Cartesian-Trajectory"
-      },
-      {
-        "name": "Debug test_DragInCST",
-        "type": "cppdbg",
-        "request": "launch",
-        "program": "${workspaceFolder}/build/test_DragInCST/test_DragInCSTd",
-        "args": [],
-        "stopAtEntry": false,
-        "cwd": "${workspaceFolder}",
-        "environment": [],
-        "externalConsole": false,
-        "MIMode": "gdb",
-        "setupCommands": [
-          {
-            "description": "Enable pretty-printing for gdb",
-            "text": "-enable-pretty-printing",
-            "ignoreFailures": true
-          }
-        ],
-        "miDebuggerPath": "/usr/bin/gdb",
-        "preLaunchTask": "build test_DragInCST"
-      },
-      {
-        "name": "Debug testik_fk",
-        "type": "cppdbg",
-        "request": "launch",
-        "program": "${workspaceFolder}/build/testik_fk/testik_fkd",
-        "args": [],
-        "stopAtEntry": false,
-        "cwd": "${workspaceFolder}",
-        "environment": [],
-        "externalConsole": false,
-        "MIMode": "gdb",
-        "setupCommands": [
-          {
-            "description": "Enable pretty-printing for gdb",
-            "text": "-enable-pretty-printing",
-            "ignoreFailures": true
-          }
-        ],
-        "miDebuggerPath": "/usr/bin/gdb",
-        "preLaunchTask": "build testik_fk"
-      },
-      {
-        "name": "Debug test_Jacobian",
-        "type": "cppdbg",
-        "request": "launch",
-        "program": "${workspaceFolder}/build/test_Jacobian/test_Jacobiand",
-        "args": [],
-        "stopAtEntry": false,
-        "cwd": "${workspaceFolder}",
-        "environment": [],
-        "externalConsole": false,
-        "MIMode": "gdb",
-        "setupCommands": [
-          {
-            "description": "Enable pretty-printing for gdb",
-            "text": "-enable-pretty-printing",
-            "ignoreFailures": true
-          }
-        ],
-        "miDebuggerPath": "/usr/bin/gdb",
-        "preLaunchTask": "build test_Jacobian"
-      },
-      {
-        "name": "Debug test_joint_impdance",
-        "type": "cppdbg",
-        "request": "launch",
-        "program": "${workspaceFolder}/build/test_joint_impdance/test_joint_impdanced",
-        "args": [],
-        "stopAtEntry": false,
-        "cwd": "${workspaceFolder}",
-        "environment": [],
-        "externalConsole": false,
-        "MIMode": "gdb",
-        "setupCommands": [
-          {
-            "description": "Enable pretty-printing for gdb",
-            "text": "-enable-pretty-printing",
-            "ignoreFailures": true
-          }
-        ],
-        "miDebuggerPath": "/usr/bin/gdb",
-        "preLaunchTask": "build test_joint_impdance"
-      },
-      {
-        "name": "Debug testp5",
-        "type": "cppdbg",
-        "request": "launch",
-        "program": "${workspaceFolder}/build/testp5/testp5d",
-        "args": [],
-        "stopAtEntry": false,
-        "cwd": "${workspaceFolder}",
-        "environment": [],
-        "externalConsole": false,
-        "MIMode": "gdb",
-        "setupCommands": [
-          {
-            "description": "Enable pretty-printing for gdb",
-            "text": "-enable-pretty-printing",
-            "ignoreFailures": true
-          }
-        ],
-        "miDebuggerPath": "/usr/bin/gdb",
-        "preLaunchTask": "build testp5"
+        "preLaunchTask": "build mujoco_run"
       }
     ]
   }

@@ -2,144 +2,18 @@
     "version": "2.0.0",
     "tasks": [
       {
-        "label": "build cartesian_admittance",
+        "label": "build mujoco_run",
         "type": "shell",
         "command": "cmake",
         "args": [
             "--build", "${workspaceFolder}/build",
-            "--target", "cartesian_admittance"
+            "--target", "mujoco_run"
         ],
         "group": {
             "kind": "build",
             "isDefault": true
         },
-        "detail": "Build the cartesian_admittance target using CMake"
-      },
-      {
-        "label": "build test_ik",
-        "type": "shell",
-        "command": "cmake",
-        "args": [
-            "--build", "${workspaceFolder}/build",
-            "--target", "test_ik"
-        ],
-        "group": {
-            "kind": "build",
-            "isDefault": true
-        },
-        "detail": "Build the test_ik target using CMake"
-      },
-      {
-        "label": "build test_Cartesian_DragInCST",
-        "type": "shell",
-        "command": "cmake",
-        "args": [
-            "--build", "${workspaceFolder}/build",
-            "--target", "test_Cartesian_DragInCST"
-        ],
-        "group": {
-            "kind": "build",
-            "isDefault": true
-        },
-        "detail": "Build the test_Cartesian_DragInCST target using CMake"
-      },
-      {
-        "label": "build test_Cartesian_impdance",
-        "type": "shell",
-        "command": "cmake",
-        "args": [
-            "--build", "${workspaceFolder}/build",
-            "--target", "test_Cartesian_impdance"
-        ],
-        "group": {
-            "kind": "build",
-            "isDefault": true
-        },
-        "detail": "Build the test_Cartesian_impdance target using CMake"
-      },
-      {
-        "label": "build test_Cartesian",
-        "type": "shell",
-        "command": "cmake",
-        "args": [
-            "--build", "${workspaceFolder}/build",
-            "--target", "test_Cartesian"
-        ],
-        "group": {
-            "kind": "build",
-            "isDefault": true
-        },
-        "detail": "Build the test_Cartesian target using CMake"
-      },
-      {
-        "label": "build test_DragInCST",
-        "type": "shell",
-        "command": "cmake",
-        "args": [
-            "--build", "${workspaceFolder}/build",
-            "--target", "test_DragInCST"
-        ],
-        "group": {
-            "kind": "build",
-            "isDefault": true
-        },
-        "detail": "Build the test_DragInCST target using CMake"
-      },
-      {
-        "label": "build testik_fk",
-        "type": "shell",
-        "command": "cmake",
-        "args": [
-            "--build", "${workspaceFolder}/build",
-            "--target", "testik_fk"
-        ],
-        "group": {
-            "kind": "build",
-            "isDefault": true
-        },
-        "detail": "Build the testik_fk target using CMake"
-      },
-      {
-        "label": "build test_Jacobian",
-        "type": "shell",
-        "command": "cmake",
-        "args": [
-            "--build", "${workspaceFolder}/build",
-            "--target", "test_Jacobian"
-        ],
-        "group": {
-            "kind": "build",
-            "isDefault": true
-        },
-        "detail": "Build the test_Jacobian target using CMake"
-      },
-      {
-        "label": "build test_joint_impdance",
-        "type": "shell",
-        "command": "cmake",
-        "args": [
-            "--build", "${workspaceFolder}/build",
-            "--target", "test_joint_impdance"
-        ],
-        "group": {
-            "kind": "build",
-            "isDefault": true
-        },
-        "detail": "Build the test_joint_impdance target using CMake"
-      },
-      {
-        "label": "build testp5",
-        "type": "shell",
-        "command": "cmake",
-        "args": [
-            "--build", "${workspaceFolder}/build",
-            "--target", "testp5"
-        ],
-        "group": {
-            "kind": "build",
-            "isDefault": true
-        },
-        "detail": "Build the testp5 target using CMake"
-      }     
+        "detail": "Build the mujoco_run target using CMake"
+      }   
     ]
   }
