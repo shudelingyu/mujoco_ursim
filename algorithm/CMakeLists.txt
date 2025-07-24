@@ -1,29 +1,27 @@
 cmake_minimum_required(VERSION 3.15)  # 升级到更现代的版本
 
 # 定义项目
-project(common VERSION 1.0.0 LANGUAGES CXX)
+project(algorithm VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)  # 禁用编译器扩展
 
 # 使用现代目标模式替代全局设置
-add_library(common STATIC)
+add_library(algorithm STATIC)
 
 # 配置公共头文件目录
-target_include_directories(common
+target_include_directories(algorithm
     PUBLIC 
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/common>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/algorithm>
         $<INSTALL_INTERFACE:include>
-    PRIVATE
-        ${CMAKE_SOURCE_DIR}/algorithm/include
 )
 
 # 添加源文件（明确列出比GLOB更好，但保留GLOB作为示例）
 file(GLOB SOURCES 
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/common/*.hpp  # 更结构化
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/algorithm/*.hpp  # 更结构化
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
 )
-target_sources(common PRIVATE ${SOURCES})
+target_sources(algorithm PRIVATE ${SOURCES})
 
 # 平台特定依赖配置
 if(WIN32)
@@ -31,14 +29,14 @@ if(WIN32)
     find_package(Eigen3 REQUIRED CONFIG)  # 使用CONFIG模式
     
     # 使用现代目标链接方式
-    target_include_directories(common
+    target_include_directories(algorithm
         PRIVATE
             ${glfw_ROOT}/include
             ${GLEW_ROOT}/include
             ${qpOASES_ROOT}/include
     )
     
-    target_link_libraries(common PRIVATE
+    target_link_libraries(algorithm PRIVATE
         ${glfw_ROOT}/lib-vc2019/glfw3.lib
         ${GLEW_ROOT}/lib/glew32rs.lib
         OpenGL::GL
@@ -48,35 +46,25 @@ if(WIN32)
     )
     
     if(MSVC)
-        target_compile_options(common PRIVATE /bigobj)
+        target_compile_options(algorithm PRIVATE /bigobj)
     endif()
 
 elseif(UNIX)
-    find_package(OpenGL REQUIRED)
-    find_package(glfw3 REQUIRED)
     find_package(Eigen3 REQUIRED CONFIG)
-    find_package(GLEW REQUIRED)  # 添加GLEW查找
     
-    target_link_libraries(common PRIVATE
-        glfw
-        OpenGL::GL
-        GLEW::GLEW
+    target_link_libraries(algorithm PRIVATE
         Eigen3::Eigen
         ${qpEnvPath}/lib/libqpOASES.a
-        ${MUJOCO_DIR}/lib/libmujoco.so.3.2.7
     )
     
-    target_include_directories(common PRIVATE
+    target_include_directories(algorithm PRIVATE
         ${qpEnvPath}/include
     )
 endif()
 
-# 链接内部算法库（使用现代语法）
-target_link_libraries(common PUBLIC algorithm)
-
 # 安装规则（现代CMake风格）
-install(TARGETS common
-    EXPORT commonTargets
+install(TARGETS algorithm
+    EXPORT algorithmTargets
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib
     RUNTIME DESTINATION bin

@@ -1,187 +1,204 @@
 #include "controller.hpp"
-#include "ur_kinematics.hpp"
-#include "modern_robotics.hpp"
-// #include "ACSP.hpp"
+#include <algorithm>
+#include "algorithm/math_util.hpp"
+#include <cstring>
+#include <stdexcept>
+#include <iostream>
 
-Controller::Controller()
-{
-    m_ctrl.joints.resize(6);
-    prev_ddxe.resize(6);
-    prev_ddxe.reserve(0);
-    prev_dxe.resize(6);
-    prev_dxe.reserve(0);
-    prev_xe.resize(6);
-    prev_xe.reserve(0);
+namespace common {
+
+Controller& Controller::getInstance() {
+    static Controller instance;
+    return instance;
 }
 
-Controller::~Controller()
-{
+Controller::Controller() {
+    // 初始化默认参数
+    m_ctrl.joints.resize(m_num_joints);
 }
 
-void Controller::reset(){
-    prev_ddxe.resize(6);
-    prev_ddxe.reserve(0);
-    prev_dxe.resize(6);
-    prev_dxe.reserve(0);
-    prev_xe.resize(6);
-    prev_xe.reserve(0);
+void Controller::resize_vectors(size_t size) {
+    m_num_joints = size;
+    m_ctrl.joints.resize(size);
 }
 
-void Controller::load_xml(const initmujoco &init,MjWrapper &mjWrapper,int argc, const char** argv){
-    char xmlpath[100] = {};
-    char datapath[100] = {};
-
-    strcat(xmlpath, init.path.c_str());
-    strcat(xmlpath, init.xmlfile.c_str());
-
-    strcat(datapath, init.path.c_str());
-    strcat(datapath, init.datafile.c_str());
-    char error[1000] = "Could not load binary model";
-
-    // check command-line arguments
-    if (argc < 2)
-        mjWrapper.model = mj_loadXML(xmlpath, 0, error, 1000);
-
-    else if (strlen(argv[1]) > 4 && !strcmp(argv[1] + strlen(argv[1]) - 4, ".mjb"))
-        mjWrapper.model  = mj_loadModel(argv[1], 0);
-    else
-        mjWrapper.model  = mj_loadXML(argv[1], 0, error, 1000);
-    if (!mjWrapper.model )
-        mju_error_s("Load model error: %s", error);
-
-    // make data
-    mjWrapper.data = mj_makeData(mjWrapper.model);
-}
-
-// 配置制定关节pd参数
-void Controller::configure_actuators_pid(const mjModel *m, int selected_joint, double Kpp, double Kpd,double Kpi, double Kvp, double Kvd)
-{
-    auto &ctrl = m_ctrl.joints[selected_joint];
-    switch (ctrl.mode)
-    {
-    case TORQUE_CONTROL:
-        break;
-    case VELOCITY_CONTROL:
-    {
-        ctrl.pid.Kvp = Kvp;
-        ctrl.pid.Kvd = Kvd;
-        break;
-    }
-
-    case POSITION_CONTROL:
-    {
-        ctrl.pid.Kpp = Kpp;
-        ctrl.pid.Kpd = Kpd;
-        ctrl.pid.Kpi = Kpi;
-
-        break;
-    }
+void Controller::reset() {  
+    for (auto& joint : m_ctrl.joints) {
+        joint.position_pid.prev_error = 0.0;
+        joint.position_pid.integral = 0.0;
+        joint.velocity_pid.prev_error = 0.0;
+        joint.velocity_pid.integral = 0.0;
     }
 }
 
-// 配置执行器控制模式
-void Controller::configure_actuators_mode(const mjModel *m, ControlMode mode)
-{
-    for (int i = 0; i < m->nu; i++)
-    {
-        switch (mode)
-        {
-        case TORQUE_CONTROL:
-            m_ctrl.joints[i].mode = TORQUE_CONTROL;
+void Controller::load_xml(const InitConfig &init, MujocoContext &context, int argc, const char** argv) {
+    std::string xmlpath = init.xml_file;
+    char error[1000] = "Could not load model";
+
+    if (argc < 2) {
+        context.model = mj_loadXML(xmlpath.c_str(), nullptr, error, sizeof(error));
+    } 
+    else if (std::strlen(argv[1]) > 4 && !strcmp(argv[1] + strlen(argv[1]) - 4, ".mjb")) {
+        context.model = mj_loadModel(argv[1], nullptr);
+    } 
+    else {
+        context.model = mj_loadXML(argv[1], nullptr, error, sizeof(error));
+    }
+
+    if (!context.model) {
+        throw std::runtime_error("Load model error: " + std::string(error));
+    }
+
+    context.data = mj_makeData(context.model);
+    resize_vectors(context.model->nu);  // 自动适配关节数
+}
+
+void Controller::configure_joint_pid(size_t joint_index, double Kpp, double Kpd, double Kpi, double Kvp, double Kvd) {
+    if (joint_index >= m_num_joints) {
+        throw std::out_of_range("Joint index out of bounds");
+    }
+
+    auto& joint = m_ctrl.joints[joint_index];
+    switch (joint.mode) {
+        case ControlMode::POSITION:
+            joint.position_pid.Kp = Kpp;
+            joint.position_pid.Kd = Kpd;
+            joint.position_pid.Ki = Kpi;
             break;
-        case VELOCITY_CONTROL:
-            m_ctrl.joints[i].mode = VELOCITY_CONTROL;
+            
+        case ControlMode::VELOCITY:
+            joint.velocity_pid.Kp = Kvp;
+            joint.velocity_pid.Kd = Kvd;
             break;
-        case POSITION_CONTROL:
-            m_ctrl.joints[i].mode = POSITION_CONTROL;
+            
+        case ControlMode::TORQUE:
+            // 扭矩模式无需PID参数
             break;
+    }
+}
+
+void Controller::configure_joints_mode(ControlMode mode) {
+    for (auto& joint : m_ctrl.joints) {
+        joint.mode = mode;
+    }
+}
+
+void Controller::configure_joint_vel_limit(size_t joint_index, const std::string& vel_type, double vel_limit) {
+    if (joint_index >= m_num_joints) {
+        throw std::out_of_range("Joint index out of bounds");
+    }
+    
+    auto& joint = m_ctrl.joints[joint_index];
+    
+    if (vel_type == "RPM") {
+        joint.velocity_limit = vel_limit / 60.0 * 2.0 * algorithms::PI;
+    } 
+    else if (vel_type == "degree") {
+        joint.velocity_limit = vel_limit * algorithms::DEG_TO_RAD;
+    }
+    else {
+        joint.velocity_limit = vel_limit;
+    }
+}
+
+void Controller::set_joint_targets(
+    size_t joint_index,
+    std::optional<double> position,
+    std::optional<double> velocity,
+    std::optional<double> torque
+) {
+    if (joint_index >= m_num_joints) {
+        throw std::out_of_range("Joint index out of bounds");
+    }
+
+    auto& joint = m_ctrl.joints[joint_index];
+    
+    // 更新目标值（仅当参数非空时更新）
+    if (position.has_value()) {
+        joint.target_position = position.value();
+    }
+    if (velocity.has_value()) {
+        joint.target_velocity = velocity.value();
+    }
+    if (torque.has_value()) {
+        joint.target_torque = torque.value();
+    }
+}
+
+// ================ 核心控制计算接口 ================
+
+void Controller::compute_control(const mjModel* model, mjData* data) {
+    const double dt = model->opt.timestep;
+    
+    for (size_t i = 0; i < m_num_joints; i++) {
+        auto& joint = m_ctrl.joints[i];
+        
+        // 更新当前状态
+        joint.current_position = data->qpos[i];
+        joint.current_velocity = data->qvel[i];
+        
+        // 根据控制模式计算控制信号
+        switch (joint.mode) {
+            case ControlMode::TORQUE:
+                data->ctrl[i] = compute_torque_control(joint);
+                break;
+                
+            case ControlMode::VELOCITY:
+                data->ctrl[i] = compute_velocity_control(joint, data->qvel[i], dt);
+                break;
+                
+            case ControlMode::POSITION:
+                data->ctrl[i] = compute_position_control(joint, data->qpos[i], data->qvel[i], 
+                                                          data->qfrc_bias[i], dt);
+                break;
         }
     }
 }
 
-void Controller::configure_actuators_vel_limit(const mjModel *m, const std::string &vel_type, int selected_joint, double vel_limit)
-{
-    auto &joint = m_ctrl.joints[selected_joint];
-    if (vel_type == "RPM")
-    {
-        joint.vel_limit = vel_limit / 60 * 2 * M_PI; // RPM->rad
-    }
-    else if (vel_type == "rad")
-    {
-        joint.vel_limit = vel_limit; // rad->rad
-    }
-    else if (vel_type == "degree")
-    {
-        joint.vel_limit = vel_limit / 360 * 2 * M_PI; // degree->rad
-    }
+// ================ 具体控制算法实现 ================
+
+double Controller::compute_torque_control(const JointController& joint) {
+    // 直接返回目标扭矩
+    return joint.target_torque;
 }
 
-double Controller::PDcontroller(JointController &ctrl, const double &dt)
-{
-    double pos_error = ctrl.pid.target - ctrl.pid.current;
-    double derivative = (pos_error - ctrl.pid.prev_error) / dt;
-    ctrl.pid.prev_error = pos_error;
-    return ctrl.pid.Kpp * pos_error + ctrl.pid.Kpd * derivative;
-}
-
-double Controller::PIcontroller(JointController &ctrl, const double &dt)
-{
-    double vel_error = ctrl.pid.target - ctrl.pid.current;
-    ctrl.pid.integral += vel_error * dt;
-    ctrl.pid.integral = std::clamp(ctrl.pid.integral, -ctrl.pid.max_integral, ctrl.pid.max_integral);
-    double output = ctrl.pid.Kpp * vel_error + ctrl.pid.Kpi * ctrl.pid.integral;
-    // 输出限幅
-    return std::clamp(output, -ctrl.pid.max_output, ctrl.pid.max_output);
-}
-
-void Controller::AdmittanceController(const mjModel* m,mjData* d,const double& dt,AdmittanceParam& param,std::vector<double> &target_q){
-    // ddxe(i+1)=[Fxe(i+1)-B*dxe(i)-K*xe(i)]/M;
-    // dxe(i+1)=dt*[ddxe(i+1)+ddxe(i)]/2+dxe(i);              %v1=dt*(a0+a1)/2+v0  加速度一次积分得速度
-    // xe(i+1)=dt*[dxe(i+1)+dxe(i)]/2+xe(i);
-    target_q.clear();
-    std::cout<<"param.dxe";
-    for(int i = 0 ;i<6;i++){
-        // prev_ddxe[i] = param.ddxe[i];
-        // prev_dxe[i] = param.dxe[i];
-        // prev_xe[i] = param.xe[i];
-        // param.ddxe[i] = (param.Fe[i]-param.B[i]*param.dxe[i]-param.K[i]*param.xe[i])/param.M[i];
-        // param.dxe[i] = dt*(param.ddxe[i]+prev_ddxe[i])/2 + prev_dxe[i];
-        // param.xe[i] = dt*(param.dxe[i]+prev_dxe[i])/2+prev_xe[i];
-        // std::cout<<" "<<param.dxe[i];
-        param.dxe[i] = param.Fe[i]/param.K[i];
-        param.xe[i] = dt*param.dxe[i];
-        std::cout<<" "<<param.dxe[i];
-    }
-    std::cout<<std::endl;
-    //利用雅可比矩阵求关节速度积分到关节位置
-//     Eigen::MatrixXd J = ur_frame::instance()->jacobian_body(m,d);
-//     vec_t qv = pinv(J)*stdvec2vecxd(param.dxe);
-//    // 限制关节速度
-//     double max_velocity = 1.0; // 假设最大速度为 1 rad/s
-//     for (int i = 0; i < qv.size(); i++) {
-//         qv[i] = std::clamp(qv[i], -max_velocity, max_velocity);
-//     }
-//     std::cout<<"qv"<<qv.transpose().matrix()<<std::endl;
-//     // theta_offset=theta_offset+qv*dt;
-//     vec_t target(6);
-//     for(int i=0;i<6;i++){
-//         target[i] = d->qpos[i] + qv[i]*dt;
-//     }
-//     target_q = vecxd2stdvec(target);
-
-    // 利用逆解求关节位置
-    // param.xe = {0,0,0.0000000000001,0,0,0};
-    tf_t error_ee = PosAxisAngToTrans(stdvec2vecxd(param.xe));
+double Controller::compute_velocity_control(const JointController& joint, double current_vel, double dt) {
+    // 速度控制模式
+    double velocity_error = joint.target_velocity - current_vel;
+    double derivative = (velocity_error - joint.velocity_pid.prev_error) / dt;
     
-    std::cout<<"error_ee===="<<std::endl<<error_ee.matrix()<<std::endl;
-    tf_t cur_ee = ur_frame::instance()->forward_kinematics(m,d);
-    std::cout<<"cur_ee===="<<std::endl<<cur_ee.matrix()<<std::endl;
-    tf_t target_ee = cur_ee * error_ee;
-    std::cout<<"target_ee===="<<std::endl<<target_ee.matrix()<<std::endl;
-    double target_ee_d[16]{0};
-    MatrixXdToDoubleArray(target_ee,target_ee_d);
-
-    // target_q = vecxd2stdvec(ur_frame::instance()->select_sln(target_ee_d,d));
-    ur_frame::instance()->select_sln(target_ee,d,target_q);
-
+    // 更新PID状态（注意：这里修改了const引用，实际应避免）
+    // 更好的设计是返回PID状态更新，但为简化保持这样
+    const_cast<JointController&>(joint).velocity_pid.prev_error = velocity_error;
+    
+    return joint.velocity_pid.Kp * velocity_error + 
+           joint.velocity_pid.Kd * derivative;
 }
+
+double Controller::compute_position_control(const JointController& joint, 
+                                            double current_pos, double current_vel, 
+                                            double bias, double dt) {
+    // 位置控制模式
+    double position_error = joint.target_position - current_pos;
+    double velocity_error = joint.target_velocity - current_vel;
+    
+    // 比例项
+    double proportional = joint.position_pid.Kp * position_error;
+    
+    // 微分项
+    double derivative = (position_error - joint.position_pid.prev_error) / dt;
+    
+    // 更新PID状态
+    const_cast<JointController&>(joint).position_pid.prev_error = position_error;
+    
+    // PID输出
+    double pid_output = proportional + joint.position_pid.Kd * derivative;
+    
+    // 重力补偿
+    double gravity_compensation = bias;
+    
+    // 最终控制输出
+    return pid_output + gravity_compensation;
+}
+
+} // namespace common

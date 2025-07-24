@@ -24,19 +24,11 @@ include_directories(${MUJOCO_DIR}/include)
 link_directories(${MUJOCO_DIR}/bin)
 
 add_subdirectory(common)
-add_subdirectory(ACSP)
+add_subdirectory(algorithm)
 
 # 添加子项目
-# add_subdirectory(test1)
 add_subdirectory(test_ik)
-add_subdirectory(cartesian_admittance)
-# add_subdirectory(test_Cartesian_impdance)
-# add_subdirectory(test_Cartesian-Trajectory)
-# add_subdirectory(test_DragInCST)
-# add_subdirectory(testik_fk)
-# add_subdirectory(test_Jacobian) 
-# add_subdirectory(test_joint_impdance)
-# add_subdirectory(testp5)
+
 
 
 
