@@ -57,7 +57,7 @@ if(WIN32)
 elseif(UNIX)
     target_link_libraries(common 
         glfw
-        ${OPENGL_LIBRARIES}
+        ${OPENGL_LIBRARIES} 
         GL
         GLEW
         Eigen3::Eigen

@@ -1,0 +1,158 @@
+#ifndef UR_KINEMATICS_H
+#define UR_KINEMATICS_H
+#include <Eigen/Dense>
+#include <QObject>
+
+typedef Eigen::Affine3d tf_t;
+typedef Eigen::VectorXd vec_t;
+typedef Eigen::Vector3d vec3_t;
+
+// DH参数结构体
+struct DHParameters {
+    double d;      // 沿Z轴的平移
+    double a;      // 沿X轴的平移
+    double alpha;  // 绕X轴的旋转
+    double theta;  // 绕Z轴的旋转
+};
+
+inline constexpr double ZERO_THRESH = 0.00000001;
+
+inline std::vector<double> QVec2StdVec(const QVector<double>& in){
+    std::vector<double> ret;
+    ret.clear();
+    for(int i=0;i<in.size();i++)
+        ret.push_back(in[i]);
+    return ret;
+}
+
+inline std::vector<std::vector<double>> QVecs2StdVecs(const QVector<QVector<double>>& in){
+    std::vector<std::vector<double>> ret;
+    ret.clear();
+    for(int i = 0; i<in.size();i++)
+        ret.push_back(QVec2StdVec(in[i]));
+    return ret;
+}
+
+inline QVector<double> StdVec2QVec(const std::vector<double>& in){
+    QVector<double> ret;
+    ret.clear();
+    for(int i=0;i<in.size();i++)
+        ret.push_back(in[i]);
+    return ret;
+}
+
+inline int SIGN(const double& x)
+{
+    return x >= ZERO_THRESH ? 1 : (x <= -ZERO_THRESH ? -1 : 0);
+}
+
+inline bool is_zero(const double& v)
+{
+    return std::abs(v) < ZERO_THRESH;
+}
+
+inline bool is_same(const double& lhs, const double& rhs)
+{
+    return is_zero(lhs - rhs);
+}
+
+inline double deg2rad(const double& degrees)
+{
+    return degrees * (M_PI / 180.0);
+}
+
+inline double distance(const std::vector<double>& joints1, const std::vector<double>& joints2)
+{
+    if (joints1.size() != joints2.size()) {
+        return INFINITY;
+    }
+    double sum = 0;
+    for (int i = 0; i < joints1.size(); i++) {
+        sum += std::abs(joints1[i] - joints2[i]);
+    }
+    return sum;
+}
+
+inline std::vector<double> tf2vec(const tf_t& tf)
+{
+    vec3_t trans = tf.translation();
+    vec3_t eular = tf.rotation().eulerAngles(2, 1, 0).reverse();
+    return std::vector<double>{trans.x(), trans.y(), trans.z(), eular.x(), eular.y(), eular.z()};
+}
+
+inline tf_t vec2tf(const std::vector<double>& vec)
+{
+    tf_t tf;
+    tf.setIdentity();
+    tf.translation() << vec[0], vec[1], vec[2];
+    tf.rotate(Eigen::AngleAxisd(vec[5], vec3_t::UnitZ()));
+    tf.rotate(Eigen::AngleAxisd(vec[4], vec3_t::UnitY()));
+    tf.rotate(Eigen::AngleAxisd(vec[3], vec3_t::UnitX()));
+    return tf;
+}
+
+inline std::vector<double> tf2tcp(const tf_t& tf, const double& ratio = 1.0)
+{
+    vec3_t trans = tf.translation() * ratio;
+    Eigen::AngleAxisd aa(tf.rotation());
+    vec3_t rv = aa.axis() * aa.angle();
+    return std::vector<double>{trans.x(), trans.y(), trans.z(), rv.x(), rv.y(), rv.z()};
+}
+
+inline tf_t tcp2tf(const std::vector<double>& tcp, const double& ratio = 1.0)
+{
+    Eigen::Translation3d trans(tcp[0] * ratio, tcp[1] * ratio, tcp[2] * ratio);
+    vec3_t rv(tcp[3], tcp[4], tcp[5]);
+    double angle = rv.norm();
+    if (is_zero(angle)) {
+        return tf_t(trans);
+    }
+    else {
+        rv /= angle;
+        Eigen::AngleAxisd aa(angle, rv);
+        return trans * aa;
+    }
+}
+
+
+inline Eigen::Quaterniond axisAngleToQuaternion(const Eigen::Vector3d& axis, double angle_rad) {
+    Eigen::Vector3d n = axis.normalized(); // 归一化旋转轴
+    double half_angle = angle_rad / 2.0;
+    double sin_half = sin(half_angle);
+    double cos_half = cos(half_angle);
+
+    Eigen::Quaterniond q;
+    q.w() = cos_half;
+    q.x() = n.x() * sin_half;
+    q.y() = n.y() * sin_half;
+    q.z() = n.z() * sin_half;
+    // 注：单位四元数已自动满足 ||q||=1
+    return q;
+}
+
+class ur_kinematics : public QObject
+{
+    Q_OBJECT
+public:
+    ur_kinematics();
+public:
+    void forward_kinematics(const std::vector<double>& joints,tf_t &arm2flan);
+    bool inverse_kinematics(const tf_t&flan_pose,std::vector<std::vector<double>> &slns);
+    bool select_slv(const tf_t&flan_pose,const std::vector<double>& cur_joints,std::vector<double> &target_joints);
+
+signals:
+    void signalsetMessage(QString v);
+
+private:
+    tf_t __transform(const DHParameters& dh, double joint_angle);
+    bool __inverse_kinematics(const tf_t &flange_pose, const vec3_t &sign_sln, const double &q6_des, std::vector<double> &sln);
+    bool __is_within_limit(const std::vector<double>& joints);
+    bool __convert_sln_jointlike(const std::vector<double>& joints, std::vector<double>& sln);
+    bool __sort_slns_jointlike(const std::vector<double>& joints, std::vector<std::vector<double>>& slns);
+
+
+private:
+    std::vector<DHParameters> dh_params_;
+};
+
+#endif // UR_KINEMATICS_H

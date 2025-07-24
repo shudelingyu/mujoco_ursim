@@ -339,40 +339,6 @@ inline Eigen::MatrixXd pinv(Eigen::MatrixXd A)
 
 	return X;
 }
-/*
-	 * s_quadprog 求解二次规划问题
-	 *			min 0.5 x'Gx + g0'x
-	 *				s.t.
-	 *                   CE x == ce0
-	 *                   CI x <= ci0
-	 *	参数说明：
-	 *			nG : dim(x)
-	 *			nCE : 等式约束个数
-	 *			nCI : 不等式约束个数
-	 *   注意： 1、G矩阵必须正定
-	 *		  2、mem为内部只用的内存空间，大小需大于 2*nG*nG + 3*nG + 8*(nCE+nCI)
-	 *		  3、函数内部会更改G、g0、CE、ce0、CI、ci0等矩阵
-	 */
-// inline double s_quadprog(Size nG, Size nCE, Size nCI,
-//     const double *G, const double *g0,
-//     const double *CE, const double *ce0,
-//     const double *CI, const double *ci0,
-//     double *x, double *mem);
-
-// //力旋量
-// inline Eigen::MatrixXd force_to_force(Eigen::MatrixXd &T,Eigen::MatrixXd &force_in_body)
-// {
-// //将末端作用力转换到世界坐标系上
-// //参考现代机器人学P67
-// //Js=[AdTsb]*Jb
-// Eigen::MatrixXd force_in_forword;
-// Eigen::MatrixXd Tba=T.inverse();
-// Eigen::MatrixXd ans=mr::Adjoint(Tba);
-// return force_in_forword=ans.transpose()*force_in_body;
-// }
-// //静力学
-// //tor=J.T*F
-//F=J.-T*tor
 
 
 

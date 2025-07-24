@@ -38,7 +38,7 @@ const double qinit[6] = {0,0,0,0,0,0};
 void controller(const mjModel* m, mjData* d) {
     double time = d->time;
     double dt = 0.002;
-    ur_frame *ur_kin = ur_frame::instance();
+    // ur_frame *ur_kin = ur_frame::instance();
     //正动力学计算
     //mj_forward(m,d);
     //FK
@@ -75,12 +75,10 @@ void controller(const mjModel* m, mjData* d) {
 
         ctrl.target_pos= plan.CubicSpline_at(param.time_whole.size(), param.time_whole.data(), param.pos[i].data(), param.vel[i].data(), param.pos_p1[i].data(), param.pos_p2[i].data(), param.pos_p3[i].data(), time);
         if(i==1){
-            if(ctrl.target_pos<=1e-7)
-                std::cout<<"time=========="<<time <<std::endl;
-            // ctrl.target_pos = inputshaper.process(ctrl.target_pos);
+            ctrl.target_pos = inputshaper.process(ctrl.target_pos);
+            std::cout<<"time=========="<<time <<std::endl;
         }
-
-        
+        // ctrl.target_pos = inputshaper.process(ctrl.target_pos);
         ctrl.pid.target = ctrl.target_pos;
         ctrl.pid.current = d->qpos[i];
         switch (ctrl.mode) {
@@ -286,7 +284,7 @@ void init_controller(const mjModel* m, mjData* d)
     for (int i = 0; i < m->nu; i++)
         plan.CubicSpline(param.time_whole.size(), param.time_whole.data(), param.pos[i].data(), param.vel[i].data(), param.pos_p1[i].data(), param.pos_p2[i].data(), param.pos_p3[i].data());
 
-        ShapedImpulse shaperParam = inputshaper.shaperGenerator(ShaperType::ZV,7,0.12);
+        ShapedImpulse shaperParam = inputshaper.shaperGenerator(ShaperType::ZVD,7,0.12);
         inputshaper.init(shaperParam.amplitudes,shaperParam.times,0.002);
 }
 
