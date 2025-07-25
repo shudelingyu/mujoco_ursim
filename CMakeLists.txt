@@ -21,10 +21,11 @@ elseif(UNIX)
     set(qpEnvPath "/usr/local/")
 endif()
 include_directories(${MUJOCO_DIR}/include)
-link_directories(${MUJOCO_DIR}/bin)
+link_directories(${MUJOCO_DIR}/bin) 
 
 add_subdirectory(common)
 add_subdirectory(algorithm)
+add_subdirectory(simulate)
 
 # 添加子项目
 add_subdirectory(Main)

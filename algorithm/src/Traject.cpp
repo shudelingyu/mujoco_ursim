@@ -218,9 +218,12 @@ namespace algorithms
                     angular_vel = 2.0 * dq.vec() / time_step_; // 小角度近似
                     angular_acc = angular_vel - full_trajectory.back().angular_vel / time_step_;
                 }
-
+                tf_t waypoint;
+                waypoint.translation() = pos;
+                Matrix3d rot =  quat.toRotationMatrix();
+                waypoint.linear()= rot;
                 // 保存轨迹点
-                full_trajectory.push_back({pos, quat, vel, angular_vel, acc, angular_acc});
+                full_trajectory.push_back({pos, quat, vel, angular_vel, acc, angular_acc,waypoint});
             }
 
             // 更新当前时间（用于下一段起点）

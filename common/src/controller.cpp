@@ -14,16 +14,16 @@ Controller& Controller::getInstance() {
 
 Controller::Controller() {
     // 初始化默认参数
-    m_ctrl.joints.resize(m_num_joints);
+    rst_.joints.resize(joints_num_);
 }
 
 void Controller::resize_vectors(size_t size) {
-    m_num_joints = size;
-    m_ctrl.joints.resize(size);
+    joints_num_ = size;
+    rst_.joints.resize(size);
 }
 
 void Controller::reset() {  
-    for (auto& joint : m_ctrl.joints) {
+    for (auto& joint : rst_.joints) {
         joint.position_pid.prev_error = 0.0;
         joint.position_pid.integral = 0.0;
         joint.velocity_pid.prev_error = 0.0;
@@ -31,34 +31,35 @@ void Controller::reset() {
     }
 }
 
-void Controller::load_xml(const InitConfig &init, MujocoContext &context, int argc, const char** argv) {
+void Controller::load_xml(const InitConfig &init) {
+    init_config_ = init;
     std::string xmlpath = init.xml_file;
     char error[1000] = "Could not load model";
 
-    if (argc < 2) {
-        context.model = mj_loadXML(xmlpath.c_str(), nullptr, error, sizeof(error));
-    } 
-    else if (std::strlen(argv[1]) > 4 && !strcmp(argv[1] + strlen(argv[1]) - 4, ".mjb")) {
-        context.model = mj_loadModel(argv[1], nullptr);
-    } 
-    else {
-        context.model = mj_loadXML(argv[1], nullptr, error, sizeof(error));
-    }
-
-    if (!context.model) {
+    mujoco_context_.model = mj_loadXML(xmlpath.c_str(), nullptr, error, sizeof(error));
+    
+    if (!mujoco_context_.model) {
         throw std::runtime_error("Load model error: " + std::string(error));
     }
 
-    context.data = mj_makeData(context.model);
-    resize_vectors(context.model->nu);  // 自动适配关节数
+    mujoco_context_.data = mj_makeData(mujoco_context_.model);
+    m_ = mujoco_context_.model;
+    d_ = mujoco_context_.data;
+    resize_vectors(mujoco_context_.model->njnt);  // 自动适配关节数
 }
-
-void Controller::configure_joint_pid(size_t joint_index, double Kpp, double Kpd, double Kpi, double Kvp, double Kvd) {
-    if (joint_index >= m_num_joints) {
+void Controller::init(mjModel *model, mjData *data)
+{
+    m_ = model;
+    d_ = data;
+    resize_vectors(m_->njnt);
+}
+void Controller::configure_joint_pid(size_t joint_index, double Kpp, double Kpd, double Kpi, double Kvp, double Kvd)
+{
+    if (joint_index >= joints_num_) {
         throw std::out_of_range("Joint index out of bounds");
     }
 
-    auto& joint = m_ctrl.joints[joint_index];
+    auto& joint = rst_.joints[joint_index];
     switch (joint.mode) {
         case ControlMode::POSITION:
             joint.position_pid.Kp = Kpp;
@@ -78,17 +79,17 @@ void Controller::configure_joint_pid(size_t joint_index, double Kpp, double Kpd,
 }
 
 void Controller::configure_joints_mode(ControlMode mode) {
-    for (auto& joint : m_ctrl.joints) {
+    for (auto& joint : rst_.joints) {
         joint.mode = mode;
     }
 }
 
 void Controller::configure_joint_vel_limit(size_t joint_index, const std::string& vel_type, double vel_limit) {
-    if (joint_index >= m_num_joints) {
+    if (joint_index >= joints_num_) {
         throw std::out_of_range("Joint index out of bounds");
     }
     
-    auto& joint = m_ctrl.joints[joint_index];
+    auto& joint = rst_.joints[joint_index];
     
     if (vel_type == "RPM") {
         joint.velocity_limit = vel_limit / 60.0 * 2.0 * algorithms::PI;
@@ -107,11 +108,11 @@ void Controller::set_joint_targets(
     std::optional<double> velocity,
     std::optional<double> torque
 ) {
-    if (joint_index >= m_num_joints) {
+    if (joint_index >= joints_num_) {
         throw std::out_of_range("Joint index out of bounds");
     }
 
-    auto& joint = m_ctrl.joints[joint_index];
+    auto& joint = rst_.joints[joint_index];
     
     // 更新目标值（仅当参数非空时更新）
     if (position.has_value()) {
@@ -129,9 +130,9 @@ void Controller::set_joint_targets(
 
 void Controller::compute_control(const mjModel* model, mjData* data) {
     const double dt = model->opt.timestep;
-    
-    for (size_t i = 0; i < m_num_joints; i++) {
-        auto& joint = m_ctrl.joints[i];
+
+    for (size_t i = 0; i < joints_num_; i++) {
+        auto& joint = rst_.joints[i];
         
         // 更新当前状态
         joint.current_position = data->qpos[i];

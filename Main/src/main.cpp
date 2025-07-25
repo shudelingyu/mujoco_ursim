@@ -3,34 +3,28 @@
 // 主函数
 int main(int argc, const char** argv) {
     
-    // 初始化配置
-    init_config.sim_duration = 50.0;
-    
-    // 加载模型
-    controller.load_xml(init_config, mujoco_context, argc, argv);
-    
     // 初始化控制器
-    initialize_controller(mujoco_context.model, mujoco_context.data);
+    initialize_controller();
     
     // 创建可视化器
-    MuJoCoViewer viewer(mujoco_context);
+    MuJoCoViewer viewer(controller.get_mujocoContext());
     
     // 设置控制回调
     mjcb_control = control_callback;
     
     // 运行仿真
-    viewer.run(init_config.sim_duration);
+    viewer.run();
     
     // 删除MuJoCo数据
-    if (mujoco_context.data) {
-        mj_deleteData(mujoco_context.data);
-        mujoco_context.data = nullptr;
+    if (controller.get_mujocoContext()->data) {
+        mj_deleteData(controller.get_mujocoContext()->data);
+        controller.get_mujocoContext()->data = nullptr;
     }
     
     // 删除MuJoCo模型
-    if (mujoco_context.model) {
-        mj_deleteModel(mujoco_context.model);
-        mujoco_context.model = nullptr;
+    if (controller.get_mujocoContext()->model) {
+        mj_deleteModel(controller.get_mujocoContext()->model);
+        controller.get_mujocoContext()->model = nullptr;
     }
     
     // 终止GLFW

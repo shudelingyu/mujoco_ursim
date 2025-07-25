@@ -1,6 +1,7 @@
 #include <vector>
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
+#include "math_util.hpp"
 namespace algorithms
 {
     inline constexpr double MAX_VELOCITY = 0.1;
@@ -14,6 +15,7 @@ namespace algorithms
         Eigen::Vector3d angular_vel = Eigen::Vector3d::Zero();  // 角速度 (rad/s)
         Eigen::Vector3d acceleration = Eigen::Vector3d::Zero(); // 线加速度 (m/s²)
         Eigen::Vector3d angular_acc = Eigen::Vector3d::Zero();  // 线加速度 (m/s²)
+        tf_t point = tf_t::Identity();
     };
 
     class QuinticTrajectory

@@ -73,10 +73,38 @@ struct JointController {
     PIDParams velocity_pid;   // 速度环PID
 };
 
+struct RobotData
+{
+    std::vector<int> body_parentid_;
+
+    std::vector<int> jnt_type_;
+    std::vector<int> jnt_group_;
+    std::vector<int> jnt_qposadr_;
+    std::vector<std::optional<std::pair<mjtNum, mjtNum>>> jnt_range_;
+    std::vector<std::string> jnt_names_;
+
+    std::vector<int> actuator_group_;
+    std::vector<std::optional<std::pair<mjtNum, mjtNum>>> actuator_ctrlrange_;
+    std::vector<std::string> actuator_names_;
+
+    std::vector<std::string> equality_names_;
+
+    std::vector<mjtNum> history_; // history buffer (nhistory x state_size)
+
+    // mjModel and mjData fields that can be modified by the user through the GUI
+    std::vector<mjtNum> qpos_;
+    std::vector<mjtNum> qpos_prev_;
+    std::vector<mjtNum> ctrl_;
+    std::vector<mjtNum> ctrl_prev_;
+    std::vector<mjtByte> eq_active_;
+    std::vector<mjtByte> eq_active_prev_;
+};
+
 // 机器人控制状态
 struct RobotControlState {
     std::vector<JointController> joints; // 关节控制器向量
     int active_joint_index = 0;          // 当前激活的关节索引
+    RobotData robot_data_;
 };
 
 } // namespace mujoco_utils
