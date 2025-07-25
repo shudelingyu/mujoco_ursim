@@ -24,7 +24,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)  # 禁用编译器扩展
 
 include_directories(mujoco_simulate
     PUBLIC 
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/simulate>
         $<INSTALL_INTERFACE:include>
 )
 

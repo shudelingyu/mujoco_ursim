@@ -15,7 +15,7 @@ namespace algorithms
         void forward_kinematics(const std::vector<double> &joints, tf_t &arm2flan);
         bool inverse_kinematics(const tf_t &flan_pose, std::vector<std::vector<double>> &slns);
         bool select_slv(const tf_t &flan_pose, const std::vector<double> &cur_joints, std::vector<double> &target_joints);
-
+        MatrixXd Jacobian(const std::vector<double>& joint_angles);
     private:
         tf_t __transform(const DHParameters &dh, double joint_angle);
         bool __inverse_kinematics(const tf_t &flange_pose, const vec3_t &sign_sln, const double &q6_des, std::vector<double> &sln);

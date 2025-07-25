@@ -14,6 +14,20 @@
             "isDefault": true
         },
         "detail": "Build the Main target using CMake"
-      }   
+      },
+      {
+        "label": "build mujoco_simulate",
+        "type": "shell",
+        "command": "cmake",
+        "args": [
+            "--build", "${workspaceFolder}/build",
+            "--target", "mujoco_simulate"
+        ],
+        "group": {
+            "kind": "build",
+            "isDefault": true
+        },
+        "detail": "Build the mujoco_simulate target using CMake"
+      }  
     ]
   }

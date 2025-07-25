@@ -66,6 +66,7 @@
         "ios": "cpp",
         "variant": "cpp",
         "cassert": "cpp",
-        "cholesky": "cpp"
+        "cholesky": "cpp",
+        "core": "cpp"
     },
 }

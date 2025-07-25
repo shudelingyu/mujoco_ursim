@@ -60,6 +60,40 @@ namespace algorithms
         return false;
     }
 
+    MatrixXd ur_kinematics::Jacobian(const std::vector<double> &joint_angles)
+    {
+        int n = joint_angles.size();
+        MatrixXd J(6, n);
+        std::vector<tf_t> T_matrices(n);
+        std::vector<vec3_t> z_axes(n);
+        std::vector<vec3_t> positions(n);
+
+        // 计算各关节变换矩阵和位姿
+        tf_t T = tf_t::Identity();
+        for (int i = 0; i < n; ++i)
+        {
+            T = T * __transform(dh_params_[i], joint_angles[i]);
+            T_matrices[i] = T;
+            positions[i] = T.translation(); // 提取位置向量
+            z_axes[i] = T.linear().col(2);  // 提取z轴方向
+        }
+
+        // 末端执行器位置
+        vec3_t p_end = positions.back();
+
+        // 构造雅可比矩阵的每一列
+        for (int i = 0; i < n; ++i)
+        {
+            // 线速度部分：J_v = z_i × (p_end - p_i)
+            vec3_t r = p_end - positions[i];
+            J.block<3, 1>(0, i) = z_axes[i].cross(r);
+
+            // 角速度部分：J_ω = z_i
+            J.block<3, 1>(3, i) = z_axes[i];
+        }
+        return J;
+    }
+
     tf_t ur_kinematics::__transform(const DHParameters &dh, double joint_angle)
     {
         tf_t T = tf_t::Identity();

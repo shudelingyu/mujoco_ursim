@@ -21,6 +21,29 @@
         ],
         "miDebuggerPath": "/usr/bin/gdb",
         "preLaunchTask": "build Main"
+      },
+      {
+        "name": "Debug mujoco_simulate",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/build/simulate/mujoco_simulated",
+        "args": [
+          "--model", "${workspaceFolder}/model/ur/ur5.xml"
+        ],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+          {
+            "description": "Enable pretty-printing for gdb",
+            "text": "-enable-pretty-printing",
+            "ignoreFailures": true
+          }
+        ],
+        "miDebuggerPath": "/usr/bin/gdb",
+        "preLaunchTask": "build mujoco_simulate"
       }
     ]
   }

@@ -15,15 +15,17 @@ namespace algorithms
     constexpr double PI = M_PI;
     constexpr double DEG_TO_RAD = PI / 180.0;
     constexpr double RAD_TO_DEG = 180.0 / PI;
+    constexpr double MAX_VELOCITY = 0.1;
+    constexpr double MAX_ACCELERATION = 0.5;
 
     // 类型别名
     using Size = std::size_t;
     using MatrixXd = Eigen::MatrixXd;
     using Matrix4d = Eigen::Matrix4d;
     using Matrix3d = Eigen::Matrix3d;
-    typedef Eigen::Affine3d tf_t;
-    typedef Eigen::VectorXd vec_t;
-    typedef Eigen::Vector3d vec3_t;
+    using tf_t = Eigen::Affine3d;
+    using vec_t = Eigen::VectorXd;
+    using vec3_t = Eigen::Vector3d;
 
 // DH参数结构体
 struct DHParameters {

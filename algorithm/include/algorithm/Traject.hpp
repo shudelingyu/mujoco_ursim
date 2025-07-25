@@ -4,8 +4,6 @@
 #include "math_util.hpp"
 namespace algorithms
 {
-    inline constexpr double MAX_VELOCITY = 0.1;
-    inline constexpr double MAX_ACCELERATION = 0.5;
 
     struct TrajectoryPoint
     {
